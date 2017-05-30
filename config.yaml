@@ -1,0 +1,5 @@
+platform: 'illumina'
+
+library: 'WES-Nextera-Rapid-Capture'
+
+hg: 'programs/g1k_v27/human_g1k_v37.fasta'
