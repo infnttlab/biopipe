@@ -3,3 +3,6 @@ platform: 'illumina'
 library: 'WES-Nextera-Rapid-Capture'
 
 hg: 'programs/g1k_v27/human_g1k_v37.fasta'
+
+#Mandatory
+gatk: '/mnt/avoton/biofisici/opt_local_gatk/source/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar'

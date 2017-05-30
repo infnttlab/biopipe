@@ -98,7 +98,8 @@ rule realigner_target_creator:
     output:
         resultdir+"{sample}.interval",
     params:
-        gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = config['gatk'],
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
         realref=hg,
     shell:
         "java -jar {params.gatk} -T RealignerTargetCreator -R {params.realref} -I {input.seq} -o {output}"
