@@ -6,6 +6,7 @@ source ~/.bashrc
 PATH=~/miniconda3/bin:$PATH
 export PATH 
 pip install -U snakemake
+pip install -U PyYAML
 conda config --add channels bioconda
 
 
