@@ -20,6 +20,8 @@ rule all:
         expand(resultdir+"{sample}_dedup.bai", sample=samples),
         hg.replace('fasta', 'dict'),
         expand(resultdir+"{sample}.interval", sample=samples),
+    benchmark:
+        "benchmarks/benchmark_rule_all.txt"
     run:
         pass
 
@@ -42,6 +44,8 @@ rule mapping:
         name = "{sample}",
     conda:
         "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_mapping_{sample}.txt"
     threads: 2
     resources: mem=6
     version: 0.1
@@ -57,6 +61,8 @@ rule sort_picard:
         resultdir+"{sample}_sorted.bam",
     conda:
         "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_sort_picard_{sample}.txt"
     shell:
         "picard SortSam INPUT={input.r} OUTPUT={output}.tmp SORT_ORDER=coordinate"
         " && [ -s {output}.tmp ] && mv {output}.tmp {output}"
@@ -72,6 +78,8 @@ rule mark_duplicates:
         metricsfile=resultdir+"{sample}_dedup.metrics.txt",
     conda:
         "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_mark_duplicates_{sample}.txt"
     shell:
         "picard MarkDuplicates"
         " INPUT={input.r} OUTPUT={output}.tmp METRICS_FILE={params.metricsfile}"
@@ -86,6 +94,8 @@ rule build_bam_index:
         resultdir+"{sample}_dedup.bai",
     conda:
         "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_build_bam_{sample}.txt"
     shell:
         "picard BuildBamIndex INPUT={input.r} OUTPUT={output}"
 
@@ -101,6 +111,8 @@ rule realigner_target_creator:
         gatk = config['gatk'],
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
         realref=hg,
+    benchmark:
+        "benchmarks/benchmark_realigner_{sample}.txt"
     shell:
         "java -jar {params.gatk} -T RealignerTargetCreator -R {params.realref} -I {input.seq} -o {output}"
 
@@ -124,6 +136,8 @@ rule download_reference:
     output:
         zipped = hg+'.gz',
     version: 0.1
+    benchmark:
+        "benchmarks/benchmark_downloadreference.txt"
     shell:
         "wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz && "
         "mv human_g1k_v37.fasta.gz {output.zipped} "
@@ -133,6 +147,8 @@ rule gunzip_reference:
         zipped = hg+'.gz'
     output:
         hg
+    benchmark:
+        "benchmarks/benchmark_gunzip.txt"
     shell:
         "gunzip -k {input.zipped} || true"
 
@@ -145,6 +161,8 @@ rule index_bwa:
         bwa_indexes,
     conda:
         "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_index_bwa.txt"
     version: 0.1
     shell:
         "bwa index -a bwtsw {hg}"
@@ -158,6 +176,8 @@ rule index_picard:
         hg.replace('fasta', 'dict'),
     conda:
         "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_index_picard.txt"
     shell:
         "picard CreateSequenceDictionary R={input.hg} O={output}"
 
@@ -170,6 +190,8 @@ rule index_samtools:
         hg+'.fai'
     conda:
         "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_index_samtools.txt"
     shell:
         "samtools faidx {input.hg} "
 
