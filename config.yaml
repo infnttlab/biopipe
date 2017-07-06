@@ -4,5 +4,11 @@ library: 'WES-Nextera-Rapid-Capture'
 
 hg: 'programs/g1k_v27/human_g1k_v37.fasta'
 
+cpu_type: 'xeond'
+
+n_sim: '1' 
+
+threads: '1'
+
 #Mandatory
 gatk: '/mnt/avoton/biofisici/opt_local_gatk/source/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar'

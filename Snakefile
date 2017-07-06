@@ -3,6 +3,9 @@
 #snakemake --cores 6 --resources mem=12
 configfile: "config.yaml"
 
+n_sim = config['n_sim']
+cpu_type = config['cpu_type']
+thrs = config['threads']
 
 hg = config['hg']
 bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
@@ -21,7 +24,7 @@ rule all:
         hg.replace('fasta', 'dict'),
         expand(resultdir+"{sample}.interval", sample=samples),
     benchmark:
-        "benchmarks/benchmark_rule_all.txt"
+        "benchmarks/benchmark_rule_all_subset_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     run:
         pass
 
@@ -45,7 +48,7 @@ rule mapping:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_mapping_{sample}.txt"
+        "benchmarks/benchmark_mapping_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample=samples)
     threads: 2
     resources: mem=6
     version: 0.1
@@ -62,7 +65,7 @@ rule sort_picard:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_sort_picard_{sample}.txt"
+        "benchmarks/benchmark_sort_picard_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample = samples)
     shell:
         "picard SortSam INPUT={input.r} OUTPUT={output}.tmp SORT_ORDER=coordinate"
         " && [ -s {output}.tmp ] && mv {output}.tmp {output}"
@@ -79,7 +82,7 @@ rule mark_duplicates:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_mark_duplicates_{sample}.txt"
+        "benchmarks/benchmark_mark_duplicates_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample = samples)
     shell:
         "picard MarkDuplicates"
         " INPUT={input.r} OUTPUT={output}.tmp METRICS_FILE={params.metricsfile}"
@@ -95,7 +98,7 @@ rule build_bam_index:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_build_bam_{sample}.txt"
+        "benchmarks/benchmark_build_bam_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample = samples)
     shell:
         "picard BuildBamIndex INPUT={input.r} OUTPUT={output}"
 
@@ -112,7 +115,7 @@ rule realigner_target_creator:
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
         realref=hg,
     benchmark:
-        "benchmarks/benchmark_realigner_{sample}.txt"
+        "benchmarks/benchmark_realigner_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample = samples)
     shell:
         "java -jar {params.gatk} -T RealignerTargetCreator -R {params.realref} -I {input.seq} -o {output}"
 
@@ -137,7 +140,7 @@ rule download_reference:
         zipped = hg+'.gz',
     version: 0.1
     benchmark:
-        "benchmarks/benchmark_downloadreference.txt"
+        "benchmarks/benchmark_downloadreference_subset_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     shell:
         "wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz && "
         "mv human_g1k_v37.fasta.gz {output.zipped} "
@@ -148,7 +151,7 @@ rule gunzip_reference:
     output:
         hg
     benchmark:
-        "benchmarks/benchmark_gunzip.txt"
+        "benchmarks/benchmark_gunzip_subset_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     shell:
         "gunzip -k {input.zipped} || true"
 
@@ -162,7 +165,7 @@ rule index_bwa:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_index_bwa.txt"
+        "benchmarks/benchmark_index_bwa_subset_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     version: 0.1
     shell:
         "bwa index -a bwtsw {hg}"
@@ -177,7 +180,7 @@ rule index_picard:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_index_picard.txt"
+        "benchmarks/benchmark_index_picard_subset_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     shell:
         "picard CreateSequenceDictionary R={input.hg} O={output}"
 
@@ -191,7 +194,7 @@ rule index_samtools:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_index_samtools.txt"
+        "benchmarks/benchmark_index_samtools_subset_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     shell:
         "samtools faidx {input.hg} "
 
