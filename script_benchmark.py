@@ -5,7 +5,13 @@ import re
 
 #benchmark_{name}_subset_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt
 
+
 list_of_df = []
+for file in os.listdir():
+    if file=="Tabellone.csv":
+        df = pd.read_csv(file, sep='\t')
+        list_of_df.append(df)
+    
 list_of_benchmark = []
 for file in os.listdir('./'+'benchmarks'):
     if file.startswith("benchmark_") and file.endswith(".txt"):
