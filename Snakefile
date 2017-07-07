@@ -48,7 +48,7 @@ rule mapping:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_mapping_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample=samples)
+        "benchmarks/benchmark_mapping_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     threads: 2
     resources: mem=6
     version: 0.1
@@ -65,7 +65,7 @@ rule sort_picard:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_sort_picard_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample = samples)
+        "benchmarks/benchmark_sort_picard_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     shell:
         "picard SortSam INPUT={input.r} OUTPUT={output}.tmp SORT_ORDER=coordinate"
         " && [ -s {output}.tmp ] && mv {output}.tmp {output}"
@@ -82,7 +82,7 @@ rule mark_duplicates:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_mark_duplicates_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample = samples)
+        "benchmarks/benchmark_mark_duplicates_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     shell:
         "picard MarkDuplicates"
         " INPUT={input.r} OUTPUT={output}.tmp METRICS_FILE={params.metricsfile}"
@@ -98,7 +98,7 @@ rule build_bam_index:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_build_bam_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample = samples)
+        "benchmarks/benchmark_build_bam_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     shell:
         "picard BuildBamIndex INPUT={input.r} OUTPUT={output}"
 
@@ -115,7 +115,7 @@ rule realigner_target_creator:
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
         realref=hg,
     benchmark:
-        "benchmarks/benchmark_realigner_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, sample = samples)
+        "benchmarks/benchmark_realigner_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs)
     shell:
         "java -jar {params.gatk} -T RealignerTargetCreator -R {params.realref} -I {input.seq} -o {output}"
 
