@@ -9,6 +9,7 @@ conda update conda -y
 pip install -U psutil
 pip install -U snakemake
 pip install -U PyYAML
+pip install matplotlib
 conda config --add channels bioconda
 
 
