@@ -3,7 +3,7 @@ import pylab as plt
 import os
 import re
 
-#benchmark_{name}_subset_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}.txt
+#benchmark_{name}_subset_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu{n_cpu}.txt
 
 
 list_of_df = []
