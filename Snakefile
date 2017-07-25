@@ -8,12 +8,6 @@ cpu_type = config['cpu_type']
 thrs = config['threads']
 n_cpu = config['n_cpu']
 
-split_beg = config['split_beg']
-split_end = config['split_end']
-
-data_1 = config['data_1']
-data_2 = config['data_2']
-
 hg = config['hg']
 bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
 
@@ -153,48 +147,15 @@ rule realigner_target_creator:
       #  "mv human_g1k_v37.fasta.gz {output.zipped} "
 
 #rule gunzip_reference:
-    #input:
-        #zipped = human_ref
-    #output:
-        #hg
+ #   input:
+  #      zipped = hg+'.gz'
+   # output:
+    #    hg
     #benchmark:
-        #"benchmarks/benchmark_gunzip_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+     #   "benchmarks/benchmark_gunzip_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     #shell:
-        #"gunzip -k {input.zipped} || true"
+     #   "gunzip -k {input.zipped} || true"
 
-rule create_subset:
-    input:
-        data_1 = data_1,
-        data_2 = data_2,
-    output:
-        datadir,
-    params:
-        split_beg = split_beg,
-        split_end = split_end,
-    run:
-        import itertools as it
-        
-        start = {params.split_beg}
-        nreads = {params.split_end}
-        
-        origin_1 = data_1
-        origin_2 = data_2
-        target_1 = "~/biopipe/" + {output} + "subset_{start}_{nreads}_1.fastq".format(start=start,nreads=nreads)
-        target_2 = "~/biopipe/" + {output} + "subset_{start}_{nreads}_2.fastq".format(start=start,nreads=nreads)
-        
-        files = [(origin_1,target_1),(origin_2,target_2)]
-        
-        for origin, target in files:
-            with open(origin, 'r') as origin_file:
-                with open(target, 'w') as target_file:
-                    size = 4
-                    begin = start*size
-                    end = (start+nreads)*size
-                    partial_lines = it.islice(origin_file, begin, end)
-                    for line in partial_lines:
-                        stripped_line = line.strip()
-                        print(stripped_line, file=target_file)
-            
 
 rule index_bwa:
     """generate the index of the reference genome for the bwa program"""
