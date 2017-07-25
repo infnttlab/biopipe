@@ -11,5 +11,8 @@ pip install -U snakemake
 pip install -U PyYAML
 pip install matplotlib
 conda config --add channels bioconda
-
-
+mkdir ~/data_ref
+scp /mnt/avoton/biofisici/data_snakemake/human_g1k_v37.fasta.gz ~/data_ref/
+scp /mnt/avoton/biofisici/data_snakemake/SRR1611178_1.fastq.gz ~/data_ref/
+scp /mnt/avoton/biofisici/data_snakemake/SRR1611178_2.fastq.gz ~/data_ref/
+gunzip ~/data_ref/*.gz

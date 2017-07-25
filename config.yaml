@@ -2,7 +2,7 @@ platform: 'illumina'
 
 library: 'WES-Nextera-Rapid-Capture'
 
-hg: 'programs/g1k_v27/human_g1k_v37.fasta'
+hg: '~/data_ref/human_g1k_v37.fasta'
 
 cpu_type: 'xeond'
 
@@ -12,5 +12,11 @@ threads: '1'
 
 n_cpu: '1'
 
+split_beg: '0'
+
+split_end: '5000'
+
 #Mandatory
 gatk: '/mnt/avoton/biofisici/opt_local_gatk/source/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar'
+data_1: '~/data_ref/SRR1611178_1.fastq'
+data_2: '~/data_ref/SRR1611178_2.fastq'

@@ -4,4 +4,4 @@ rule all:
        # "rm *.gz && "
         "rm -fr results && "
         "rm -fr benchmarks && "
-        "rm -fr programs "
+       # "rm -fr programs "
