@@ -31,5 +31,6 @@ for benchmark in list_of_benchmark:
     df['#cpu'] = info[5]
     list_of_df.append(df)
 x = pd.concat(list_of_df)
+x = x.sort_values(['n_sim'],ascending=True)
 x.to_csv("Tabellone.csv",sep='\t',index = False)
 # %%
