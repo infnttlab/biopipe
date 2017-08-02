@@ -4,13 +4,10 @@ import sys
 start = sys.argv[1]
 finish = sys.argv[2]
 
-origin_1 = "/home/daniele/Scrivania/sequence_data/SRR1611178_1.fastq"
-origin_2 = "/home/daniele/Scrivania/sequence_data/SRR1611178_2.fastq"
-
-#origin_1 = "/home/ddallolio/data_ref/SRR1611178_1.fastq"
-#origin_2 = "/home/ddallolio/data_ref/SRR1611178_2.fastq"
-target_1 = "./subset_{start}_{finish}_1.fastq".format(start=start,finish=finish)
-target_2 = "./subset_{start}_{finish}_2.fastq".format(start=start,finish=finish)
+origin_1 = "/home/ddallolio/data_ref/SRR1611178_1.fastq"
+origin_2 = "/home/ddallolio/data_ref/SRR1611178_2.fastq"
+target_1 = "./data/subset_{start}_{finish}_1.fastq".format(start=start,finish=finish)
+target_2 = "./data/subset_{start}_{finish}_2.fastq".format(start=start,finish=finish)
 
 files = [(origin_1,target_1),(origin_2,target_2)]
 
