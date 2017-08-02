@@ -20,10 +20,15 @@ snakemake --use-conda --config n_sim=$i
 python ~/biopipe/script_benchmark.py
 rm -fr ~/biopipe/results/
 rm -fr ~/biopipe/benchmarks/
-mkdir ~/data_ref/trash
-mv ~/data_ref/human_g1k_v37.* ~/data_ref/trash/
-mv ~/data_ref/trash/human_g1k_v37.fasta ~/data_ref/
-rm -fr ~/data_ref/trash/
+
+#How to let Snakefile run index_bwa rule
+#Removing rule's products
+
+#mkdir ~/data_ref/trash
+#mv ~/data_ref/human_g1k_v37.* ~/data_ref/trash/
+#mv ~/data_ref/trash/human_g1k_v37.fasta ~/data_ref/
+#rm -fr ~/data_ref/trash/
+
 
 done
 
