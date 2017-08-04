@@ -1,11 +1,12 @@
 import itertools as it
 import sys
+import os
 
 start = sys.argv[1]
 finish = sys.argv[2]
 
-origin_1 = "/home/ddallolio/data_ref/SRR1611178_1.fastq"
-origin_2 = "/home/ddallolio/data_ref/SRR1611178_2.fastq"
+origin_1 = os.path.expanduser("~") + "/data_ref/SRR1611178_1.fastq"
+origin_2 = os.path.expanduser("~") + "/data_ref/SRR1611178_2.fastq"
 target_1 = "./data/subset_{start}_{finish}_1.fastq".format(start=start,finish=finish)
 target_2 = "./data/subset_{start}_{finish}_2.fastq".format(start=start,finish=finish)
 
