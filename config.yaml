@@ -2,7 +2,7 @@ platform: 'illumina'
 
 library: 'WES-Nextera-Rapid-Capture'
 
-hg: '~/data_ref/human_g1k_v37.fasta'
+hg: '/data_ref/human_g1k_v37.fasta'
 
 cpu_type: 'xeond'
 
