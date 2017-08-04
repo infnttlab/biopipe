@@ -19,4 +19,3 @@ scp /mnt/avoton/biofisici/data_snakemake/SRR1611178_2.fastq.gz ~/data_ref/
 gunzip ~/data_ref/*.gz
 rm ~/biopipe/Miniconda3-latest-Linux-x86_64.sh
 chmod ugo+x script.sh
-rm ./Miniconda3-latest-Linux-x86_64.sh
