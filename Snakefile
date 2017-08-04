@@ -1,6 +1,8 @@
 #snakemake --dag | dot -Tpdf > dag.pdf
 #snakemake --detailed-summary > provenance.tsv
 #snakemake --cores 6 --resources mem=12
+shell.executable("/bin/bash")
+
 configfile: "config.yaml"
 
 n_sim = config['n_sim']
@@ -8,13 +10,15 @@ cpu_type = config['cpu_type']
 thrs = config['threads']
 n_cpu = config['n_cpu']
 
-hg = config['hg']
+import os
+home = os.path.expanduser("~")
+hg = home + config['hg']
 bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
 
 datadir = 'data/'
 resultdir = 'results/'
 
-import os
+
 samples = [filename for filename in os.listdir('./'+datadir) if filename.endswith('.fastq')]
 samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
 
