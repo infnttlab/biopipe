@@ -3,7 +3,7 @@ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
 chmod ugo+x Miniconda3-latest-Linux-x86_64.sh 
 bash ./Miniconda3-latest-Linux-x86_64.sh -b
 source ~/.bashrc
-export PATH=\"$HOME/miniconda3/bin:\$PATH\" 
+export PATH=~/miniconda3/bin:$PATH 
 conda update conda -y
 pip install -U psutil
 pip install -U snakemake
@@ -20,5 +20,5 @@ gunzip ~/data_ref/*.gz
 rm ~/biopipe/Miniconda3-latest-Linux-x86_64.sh
 chmod ugo+x script.sh
 echo " " >> ~/.bashrc
-echo "export PATH=\"$HOME/miniconda3/bin:\$PATH\""  >> ~/.bashrc
+echo "PATH=~/miniconda3/bin:$PATH"  >> ~/.bashrc
 
