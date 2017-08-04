@@ -5,7 +5,7 @@ mkdir ~/biopipe/data
 start=0
 range_width=100000
 
-for i in {2..3}
+for i in {1..3}
 do 
 
 finish=$((range_width*i))
