@@ -5,7 +5,8 @@ Prerequisiti:
 
 
 Installazione:
-- eseguire l'installer install.sh presente nella directory. 
+- eseguire l'installer install.sh presente nella directory;
+- riavviare la bash.
 
 Lo script comporta: 
 - l'installazione di Miniconda3;
