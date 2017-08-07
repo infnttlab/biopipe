@@ -1,7 +1,9 @@
 Ottimizzazione di una pipeline per l'analisi biofisica su cluster a basso consumo energetico
 
 Prerequisiti:
-- utilizzo della shell bash.
+- utilizzo della shell bash;
+- utilizzo di git;
+- copiare il repository in locale.
 
 
 Installazione:
@@ -27,6 +29,14 @@ Lo script è strutturato in tre fasi:
 - creazione dei subset da analizzare, tramite lo script split.py;
 - analisi dei subset e creazione dei benchmarks per ogni regola eseguita, tramite l'esecuzione dello Snakefile;
 - creazione di una tabella in formato csv che organizza i dati presenti nei benchmarks, tramite script_benchmark.py.
+
+Nota su config.yaml:
+- file di configurazione per lo Snakefile;
+- al suo interno sono presenti alcune voci che indicano gli elementi che caratterizzazione la computazione:
+            - cpu_type: specifica il tipo di cpu adoperata;
+            - n_sim: specifica il numero della simulazione;
+            - threads: specifica il numero di threads sfruttati;
+            - n_cpu: specifica la quantità di cpu utilizzata.
 
 Come cambiare subsets:
 - il programma split.py riceve due argomenti da linea di comando: il numero di read iniziale e il numero di read finale. 
