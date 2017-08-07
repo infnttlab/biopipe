@@ -54,13 +54,15 @@ Risultato:
 [#cpu', 'Reference subject', 'cpu_type', 'h:m:s', 'io_in', 'io_out','max_pss', 'max_rss', 'max_uss', 'max_vms', 'mean_load', 'n_sim','rule', 's', 'threads']
 
 Dove:
-#cpu = numero di cpu utilizzate
-Reference subject = specifica il subset
-cpu_type = tipo di macchina utilizzata
-n_sim = numero della simulazione
-rule = specifica la regola
-threads = numero di threads utilizzati
+- #cpu = numero di cpu utilizzate
+- Reference subject = specifica il subset
+- cpu_type = tipo di macchina utilizzata
+- n_sim = numero della simulazione
+- rule = specifica la regola
+- threads = numero di threads utilizzati
+
 Le restanti colonne sono generate da snakemake nella creazione dei benchmarks e si affida alla documentazione ufficiale del programma la corretta descrizione.
+
 
 Obiettivo:
 - Ottenere conferma, dallo studio statistico dei dati organizzati nella tabella, che l'utilizzo di un cluster a basso consumo energico per l'analisi computazionale biofisica è potenzialmente più efficace e conveniente che l'uso dei moderni sistemi adoperati attualmente. 
