@@ -4,4 +4,5 @@ channels:
 dependencies:
  - picard = 2.9.2
  - bwa
- - samtools 
+ - samtools
+ - java-jdk
