@@ -119,6 +119,8 @@ rule realigner_target_creator:
         gatk = config['gatk'],
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
         realref=hg,
+    conda:
+        "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_realigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
@@ -139,26 +141,26 @@ rule realigner_target_creator:
 #                           SINGLE-TIME-RUN RULES                             #
 ###############################################################################
 
-#rule download_reference:
- #   """download the hg19 human reference genome from 1000genome"""
-  #  output:
-   #     zipped = hg+'.gz',
-    #version: 0.1
-    #benchmark:
-     #   "benchmarks/benchmark_downloadreference_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    #shell:
-     #   "wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz && "
-      #  "mv human_g1k_v37.fasta.gz {output.zipped} "
+rule download_reference:
+    """download the hg19 human reference genome from 1000genome"""
+    output:
+        zipped = hg+'.gz',
+    version: 0.1
+    benchmark:
+        "benchmarks/benchmark_downloadreference_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "wget ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/human_g1k_v37.fasta.gz && "
+        "mv human_g1k_v37.fasta.gz {output.zipped} "
 
-#rule gunzip_reference:
- #   input:
-  #      zipped = hg+'.gz'
-   # output:
-    #    hg
-    #benchmark:
-     #   "benchmarks/benchmark_gunzip_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    #shell:
-     #   "gunzip -k {input.zipped} || true"
+rule gunzip_reference:
+    input:
+        zipped = hg+'.gz'
+    output:
+        hg
+    benchmark:
+        "benchmarks/benchmark_gunzip_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "gunzip -k {input.zipped} || true"
 
 
 rule index_bwa:
