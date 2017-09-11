@@ -54,7 +54,7 @@ rule mapping:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_mapping_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: 2
+    threads: 32
     resources: mem=6
     version: 0.1
     message: "bwa is aligning the sample '{params.name}' with the reference genome"
