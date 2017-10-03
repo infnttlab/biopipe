@@ -27,7 +27,7 @@ samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
 
 rule all:
     input:
-        expand(resultdir+"{sample}_dedup.bai", sample=samples),
+        expand(resultdir+"{sample}_realigned.bai", sample=samples),
         hg.replace('fasta', 'dict'),
         expand(resultdir+"{sample}_realigned.bam", sample=samples),
     benchmark:
@@ -136,6 +136,7 @@ rule IndelRealigner:
         indels_ref=indels_ref
     output:
         resultdir+"{sample}_realigned.bam",
+        resultdir+"{sample}_realigned.bai"
     params:
         gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
