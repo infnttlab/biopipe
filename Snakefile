@@ -136,7 +136,7 @@ rule IndelRealigner:
         indels_ref=indels_ref
     output:
         r_bam=resultdir+"{sample}_realigned.bam",
-        r_idx=resultdir+"{sample}_realigned.bam"
+        r_idx=resultdir+"{sample}_realigned.bai",
     params:
         gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
