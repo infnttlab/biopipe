@@ -15,4 +15,5 @@ threads: '1'
 n_cpu: '1'
 
 #Mandatory
-gatk: '/mnt/avoton/biofisici/opt_local_gatk/source/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar'
+gatk: '/GenomeAnalysisTK.jar'
+#gatk: '/mnt/avoton/biofisici/opt_local_gatk/source/GenomeAnalysisTK-3.5/GenomeAnalysisTK.jar'
