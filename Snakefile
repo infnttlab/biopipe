@@ -116,7 +116,7 @@ rule realigner_target_creator:
         idx=resultdir+"{sample}_dedup.bai",
         ref=hg+'.fai',
     output:
-        resultdir+"{sample}.interval",
+        resultdir+"{sample}.intervals",
     params:
         gatk = home + config['gatk'],
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
@@ -132,7 +132,7 @@ rule realigner_target_creator:
 rule IndelRealigner:
     input:
         bam=resultdir+"{sample}_dedup.bam",
-        target=resultdir+"{sample}.interval",
+        target=resultdir+"{sample}.intervals",
         indels_ref=indels_ref
     output:
         resultdir+"{sample}_realigned.bam",
