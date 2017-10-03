@@ -14,6 +14,8 @@ import os
 home = os.path.expanduser("~")
 hg = home + config['hg']
 bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
+indels_ref = home + config['indels_ref']
+
 
 datadir = 'data/'
 resultdir = 'results/'
@@ -27,7 +29,7 @@ rule all:
     input:
         expand(resultdir+"{sample}_dedup.bai", sample=samples),
         hg.replace('fasta', 'dict'),
-        expand(resultdir+"{sample}.interval", sample=samples),
+        expand(resultdir+"{sample}_realigned.bam", sample=samples),
     benchmark:
         "benchmarks/benchmark_rule_all_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
@@ -127,15 +129,25 @@ rule realigner_target_creator:
         "java -jar {params.gatk} -T RealignerTargetCreator -R {params.realref} -I {input.seq} -o {output}"
 
 
-#rule IndelRealigner:
-    #input:
-        #bam=resultdir+"{sample}_dedup.bam",
-        #ref=hg
-        #target=resultdir+"{sample}.interval",
-    #output:
+rule IndelRealigner:
+    input:
+        bam=resultdir+"{sample}_dedup.bam",
+        target=resultdir+"{sample}.interval",
+        indels_ref=indels_ref
+    output:
+        resultdir+"{sample}_realigned.bam",
+    params:
+        gatk = config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        realref=hg,
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_indelrealigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "java -jar {params.gatk} -T IndelRealigner -R {input.indels_ref} -I {input.bam} -targetIntervals {input.target} -known {input.indels_ref} -o {output}"
 
-    #run:
-        #pass
+
 
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
@@ -162,6 +174,25 @@ rule gunzip_reference:
     shell:
         "gunzip -k {input.zipped} || true"
 
+rule download_indels_ref: 
+    """download the indel reference from 1000genome """
+    output:
+        indel_zipped= indels_ref+'.gz'
+    benchmark:
+        "benchmarks/benchmark_downloadindels_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/hg38/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz"
+        "mv Mills_and_1000G_gold_standard.indels.hg38.vcf.gz {output.indel_zipped}"
+
+rule gunzip_indelref:
+    input:
+        indel_zipped = indels_ref+'.gz'
+    output:
+        indels_ref
+    benchmark:
+        "benchmarks/benchmark_gunzip_indelref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "gunzip -k {input.indel_zipped} || true"
 
 rule index_bwa:
     """generate the index of the reference genome for the bwa program"""
