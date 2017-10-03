@@ -118,7 +118,7 @@ rule realigner_target_creator:
     output:
         resultdir+"{sample}.interval",
     params:
-        gatk = config['gatk'],
+        gatk = home + config['gatk'],
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
         realref=hg,
     conda:
@@ -137,7 +137,7 @@ rule IndelRealigner:
     output:
         resultdir+"{sample}_realigned.bam",
     params:
-        gatk = config['gatk'],    
+        gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
         realref=hg,
     conda:
@@ -145,7 +145,7 @@ rule IndelRealigner:
     benchmark:
         "benchmarks/benchmark_indelrealigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
-        "java -jar {params.gatk} -T IndelRealigner -R {input.realref} -I {input.bam} -targetIntervals {input.target} -known {input.indels_ref} -o {output}"
+        "java -jar {params.gatk} -T IndelRealigner -R {params.realref} -I {input.bam} -targetIntervals {input.target} -known {input.indels_ref} -o {output}"
 
 
 
@@ -181,8 +181,8 @@ rule download_indels_ref:
     benchmark:
         "benchmarks/benchmark_downloadindels_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
-        "wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/hg38/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz && "
-        "mv Mills_and_1000G_gold_standard.indels.hg38.vcf.gz {output.indel_zipped}"
+        "wget ftp://gsapubftp-anonymous@ftp.broadinstitute.org/bundle/b37/Mills_and_1000G_gold_standard.indels.b37.vcf.gz && "
+        "mv Mills_and_1000G_gold_standard.indels.b37.vcf.gz {output.indel_zipped}"
 
 rule gunzip_indelref:
     input:
