@@ -154,79 +154,13 @@ rule IndelRealigner:
     shell:
         "java -jar {params.gatk} -T IndelRealigner -R {params.realref} -I {input.bam} -targetIntervals {input.target} -known {params.indels_ref} -o {output.r_bam}"
 
-#rule BQSR_step_1:
-#    input:
-#        r_bam=resultdir+"{sample}_realigned.bam",
-#        r_idx=resultdir+"{sample}_realigned.bai",
-#        dbsnp = dbsnp,
-#    output:
-#        resultdir+"{sample}_recal_data.table"
-#    params:  
-#        gatk = home + config['gatk'],    
-#        #gatk='programs/gatk/GenomeAnalysisTK.jar',
-#        realref=hg,
-#        indels_ref=indels_ref
-#    conda:
-#        "envs/config_conda.yaml"
-#    benchmark:
-#        "benchmarks/benchmark_BQSR1_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    threads: 32
-#    shell:
-#        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output}"
-#
-#rule BQSR_step_2:
-#    input:
-#        outtable1=resultdir+"{sample}_recal_data.table",
-#        r_bam=resultdir+"{sample}_realigned.bam",
-#    output:
-#        resultdir+"{sample}_post_recal_data.table"
-#    params:  
-#        gatk = home + config['gatk'],    
-#        #gatk='programs/gatk/GenomeAnalysisTK.jar',
-#        realref=hg,
-#        indels_ref=indels_ref,
-#        dbsnp = dbsnp,
-#    conda:
-#        "envs/config_conda.yaml"
-#    benchmark:
-#        "benchmarks/benchmark_BQSR2_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    threads: 32
-#    shell:
-#        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output}"
-#
-#rule BQSR_step_3:
-#    input:
-#        outtable1 = resultdir+"{sample}_recal_data.table",
-#        outtable2 = resultdir+"{sample}_post_recal_data.table",
-#        r_bam = resultdir+"{sample}_realigned.bam",
-#    output:
-#        plots = resultdir+"{sample}_recalibrationPlots.pdf",
-#        recal_bam = resultdir+"{sample}_recal.bam",
-#        recal_bai = resultdir+"{sample}_recal.bai",
-#    params:  
-#        gatk = home + config['gatk'],    
-#        #gatk='programs/gatk/GenomeAnalysisTK.jar',
-#        realref=hg,
-#    conda:
-#        "envs/config_conda.yaml"
-#    benchmark:
-#        "benchmarks/benchmark_BQSR3_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    threads: 32
-#    shell:
-#        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.realref} -before {input.outtable1} -after {input.outtable2} -plots {output.plots} && "
-#        "java -jar {params.gatk} -T PrintReads -R {params.realref} -I {input.r_bam} -BQSR {input.outtable1} -nct {threads} -o {output.recal_bam}"
-
-rule BQSR:
+rule BQSR_step_1:
     input:
         r_bam=resultdir+"{sample}_realigned.bam",
         r_idx=resultdir+"{sample}_realigned.bai",
         dbsnp = dbsnp,
     output:
-        outtable1 = resultdir+"{sample}_recal_data.table",
-        outtable2 = resultdir+"{sample}_post_recal_data.table",
-        plots = resultdir+"{sample}_recalibrationPlots.pdf",
-        recal_bam = resultdir+"{sample}_recal.bam",
-        recal_bai = resultdir+"{sample}_recal.bai",
+        resultdir+"{sample}_recal_data.table"
     params:  
         gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
@@ -235,13 +169,95 @@ rule BQSR:
     conda:
         "envs/config_conda.yaml"
     benchmark:
-        "benchmarks/benchmark_BQSR_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+        "benchmarks/benchmark_BQSR1_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output.outtable1} && "
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -BQSR {output.outtable1} -nct {threads} -o {output.outtable2} && "
-        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.realref} -before {output.outtable1} -after {output.outtable2} -plots {output.plots} && "
-        "java -jar {params.gatk} -T PrintReads -R {params.realref} -I {input.r_bam} -BQSR {output.outtable1} -nct {threads} -o {output.recal_bam}"
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output}"
+
+rule BQSR_step_2:
+    input:
+        outtable1=resultdir+"{sample}_recal_data.table",
+        r_bam=resultdir+"{sample}_realigned.bam",
+    output:
+        resultdir+"{sample}_post_recal_data.table"
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        realref=hg,
+        indels_ref=indels_ref,
+        dbsnp = dbsnp,
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_BQSR2_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    threads: 32
+    shell:
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output}"
+
+rule BQSR_step_3:
+    input:
+        outtable1 = resultdir+"{sample}_recal_data.table",
+        outtable2 = resultdir+"{sample}_post_recal_data.table",
+    output:
+        plots = resultdir+"{sample}_recalibrationPlots.pdf",
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        realref=hg,
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_BQSR3_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    threads: 32
+    shell:
+        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.realref} -before {input.outtable1} -after {input.outtable2} -plots {output.plots} && "
+
+rule BQSR_step_4:
+    input:
+        outtable1 = resultdir+"{sample}_recal_data.table",
+        plots = resultdir+"{sample}_recalibrationPlots.pdf",
+        r_bam = resultdir+"{sample}_realigned.bam",
+    output:
+        recal_bam = resultdir+"{sample}_recal.bam",
+        recal_bai = resultdir+"{sample}_recal.bai",
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        realref=hg,
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_BQSR4_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    threads: 32
+    shell:
+        "java -jar {params.gatk} -T PrintReads -R {params.realref} -I {input.r_bam} -BQSR {input.outtable1} -nct {threads} -o {output.recal_bam}"
+
+#rule BQSR:
+#    input:
+#        r_bam=resultdir+"{sample}_realigned.bam",
+#        r_idx=resultdir+"{sample}_realigned.bai",
+#        dbsnp = dbsnp,
+#    output:
+#        outtable1 = resultdir+"{sample}_recal_data.table",
+#        outtable2 = resultdir+"{sample}_post_recal_data.table",
+#        plots = resultdir+"{sample}_recalibrationPlots.pdf",
+#        recal_bam = resultdir+"{sample}_recal.bam",
+#        recal_bai = resultdir+"{sample}_recal.bai",
+#    params:  
+#        gatk = home + config['gatk'],    
+#        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+#        realref=hg,
+#        indels_ref=indels_ref
+#    conda:
+#        "envs/config_conda.yaml"
+#    benchmark:
+#        "benchmarks/benchmark_BQSR_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    threads: 32
+#    shell:
+#        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output.outtable1} && "
+#        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -BQSR {output.outtable1} -nct {threads} -o {output.outtable2} && "
+#        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.realref} -before {output.outtable1} -after {output.outtable2} -plots {output.plots} && "
+#        "java -jar {params.gatk} -T PrintReads -R {params.realref} -I {input.r_bam} -BQSR {output.outtable1} -nct {threads} -o {output.recal_bam}"
 
 
 ###############################################################################
