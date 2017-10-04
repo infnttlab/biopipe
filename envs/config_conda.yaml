@@ -6,4 +6,7 @@ dependencies:
  - bwa
  - samtools
  - java-jdk
- - r-essentials
+ - r-ggplot2
+ - r-reshape
+ - r-gplots
+ - r-gsalib
