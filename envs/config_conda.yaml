@@ -6,3 +6,4 @@ dependencies:
  - bwa
  - samtools
  - java-jdk
+ - r-essentials
