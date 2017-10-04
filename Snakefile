@@ -132,7 +132,7 @@ rule realigner_target_creator:
         "benchmarks/benchmark_realigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T RealignerTargetCreator -R {params.realref} -I {input.seq} -known -nt {input.indels_ref} {threads} -o {output}"
+        "java -jar {params.gatk} -T RealignerTargetCreator -R {params.realref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
 
 
 rule IndelRealigner:
