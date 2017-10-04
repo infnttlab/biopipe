@@ -14,9 +14,12 @@ import os
 home = os.path.expanduser("~")
 hg = home + config['hg']
 bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
+
 indels_ref = home + config['indels_ref']
 dbsnp = home + config['dbsnp']
-
+genotyping_mode = config['genotyping_mode']
+stand_emit_conf = config['stand_emit_conf']
+stand_call_conf = config['stand_call_conf']
 
 datadir = 'data/'
 resultdir = 'results/'
@@ -28,9 +31,9 @@ samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
 
 rule all:
     input:
-        expand(resultdir+"{sample}_recal.bai", sample=samples),
+        #expand(resultdir+"{sample}_recal.bai", sample=samples),
         hg.replace('fasta', 'dict'),
-        expand(resultdir+"{sample}_recal.bam", sample=samples),
+        expand(resultdir+"{sample}_raw.vcf", sample=samples),
     benchmark:
         "benchmarks/benchmark_rule_all_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
@@ -125,14 +128,14 @@ rule realigner_target_creator:
     params:
         gatk = home + config['gatk'],
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
-        realref=hg,
+        ref=hg,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_realigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T RealignerTargetCreator -R {params.realref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
+        "java -jar {params.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
 
 
 rule IndelRealigner:
@@ -145,14 +148,14 @@ rule IndelRealigner:
     params:
         gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
-        realref=hg,
+        ref=hg,
         indels_ref=indels_ref
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_indelrealigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
-        "java -jar {params.gatk} -T IndelRealigner -R {params.realref} -I {input.bam} -targetIntervals {input.target} -known {params.indels_ref} -o {output.r_bam}"
+        "java -jar {params.gatk} -T IndelRealigner -R {params.ref} -I {input.bam} -targetIntervals {input.target} -known {params.indels_ref} -o {output.r_bam}"
 
 rule BQSR_step_1:
     input:
@@ -164,7 +167,7 @@ rule BQSR_step_1:
     params:  
         gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
-        realref=hg,
+        ref=hg,
         indels_ref=indels_ref
     conda:
         "envs/config_conda.yaml"
@@ -172,7 +175,7 @@ rule BQSR_step_1:
         "benchmarks/benchmark_BQSR1_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output}"
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output}"
 
 rule BQSR_step_2:
     input:
@@ -183,7 +186,7 @@ rule BQSR_step_2:
     params:  
         gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
-        realref=hg,
+        ref=hg,
         indels_ref=indels_ref,
         dbsnp = dbsnp,
     conda:
@@ -192,7 +195,7 @@ rule BQSR_step_2:
         "benchmarks/benchmark_BQSR2_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output}"
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output}"
 
 rule BQSR_step_3:
     input:
@@ -203,14 +206,13 @@ rule BQSR_step_3:
     params:  
         gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
-        realref=hg,
+        ref=hg,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR3_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: 32
     shell:
-        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.realref} -before {input.outtable1} -after {input.outtable2} -plots {output.plots}"
+        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.ref} -before {input.outtable1} -after {input.outtable2} -plots {output.plots}"
 
 rule BQSR_step_4:
     input:
@@ -223,14 +225,14 @@ rule BQSR_step_4:
     params:  
         gatk = home + config['gatk'],    
         #gatk='programs/gatk/GenomeAnalysisTK.jar',
-        realref=hg,
+        ref=hg,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR4_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T PrintReads -R {params.realref} -I {input.r_bam} -BQSR {input.outtable1} -nct {threads} -o {output.recal_bam}"
+        "java -jar {params.gatk} -T PrintReads -R {params.ref} -I {input.r_bam} -BQSR {input.outtable1} -nct {threads} -o {output.recal_bam}"
 
 #rule BQSR:
 #    input:
@@ -246,7 +248,7 @@ rule BQSR_step_4:
 #    params:  
 #        gatk = home + config['gatk'],    
 #        #gatk='programs/gatk/GenomeAnalysisTK.jar',
-#        realref=hg,
+#        ref=hg,
 #        indels_ref=indels_ref
 #    conda:
 #        "envs/config_conda.yaml"
@@ -254,11 +256,31 @@ rule BQSR_step_4:
 #        "benchmarks/benchmark_BQSR_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
 #    threads: 32
 #    shell:
-#        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output.outtable1} && "
-#        "java -jar {params.gatk} -T BaseRecalibrator -R {params.realref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -BQSR {output.outtable1} -nct {threads} -o {output.outtable2} && "
-#        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.realref} -before {output.outtable1} -after {output.outtable2} -plots {output.plots} && "
-#        "java -jar {params.gatk} -T PrintReads -R {params.realref} -I {input.r_bam} -BQSR {output.outtable1} -nct {threads} -o {output.recal_bam}"
+#        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output.outtable1} && "
+#        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -BQSR {output.outtable1} -nct {threads} -o {output.outtable2} && "
+#        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.ref} -before {output.outtable1} -after {output.outtable2} -plots {output.plots} && "
+#        "java -jar {params.gatk} -T PrintReads -R {params.ref} -I {input.r_bam} -BQSR {output.outtable1} -nct {threads} -o {output.recal_bam}"
 
+rule HaplotypeCaller:
+    """GATK Haplotype Caller"""
+    input:
+        recal_bam = resultdir+"{sample}_recal.bam",
+        recal_bai = resultdir+"{sample}_recal.bai",
+    output:
+        vcf_raw = resultdir+"{sample}_raw.vcf"
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        ref=hg,
+        genotyping_mode = genotyping_mode,
+        stand_emit_conf = stand_emit_conf,
+        stand_call_conf = stand_call_conf,
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_HaplotypeCaller_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "java -jar {params.gatk} -T HaplotypeCaller -R {params.ref} -I {input.recal_bam} --genotyping_mode {params.genotyping_mode} -stand_emit_conf {params.stand_emit_conf} -stand_call_conf {params.stand_call_conf} -o {output.vcf_raw}"
 
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
