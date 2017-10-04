@@ -210,7 +210,7 @@ rule BQSR_step_3:
         "benchmarks/benchmark_BQSR3_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.realref} -before {input.outtable1} -after {input.outtable2} -plots {output.plots} && "
+        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.realref} -before {input.outtable1} -after {input.outtable2} -plots {output.plots}"
 
 rule BQSR_step_4:
     input:
