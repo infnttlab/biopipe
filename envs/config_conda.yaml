@@ -1,6 +1,8 @@
 
 channels:
   - bioconda
+  - cyclus
+  - r
 dependencies:
  - picard = 2.9.2
  - bwa
