@@ -2,12 +2,14 @@
 channels:
   - bioconda
   - cyclus
+  - conda-forge
   - r
 dependencies:
  - picard = 2.9.2
  - bwa
  - samtools
  - java-jdk
+ - openjdk
  - r-ggplot2
  - r-reshape
  - r-gplots
