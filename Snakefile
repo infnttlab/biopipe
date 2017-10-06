@@ -20,6 +20,8 @@ dbsnp = home + config['dbsnp']
 genotyping_mode = config['genotyping_mode']
 stand_emit_conf = config['stand_emit_conf']
 stand_call_conf = config['stand_call_conf']
+filter_exp_snps = config['snps']
+filter_exp_indels = config['indels']
 
 datadir = 'data/'
 resultdir = 'results/'
@@ -33,7 +35,7 @@ rule all:
     input:
         #expand(resultdir+"{sample}_recal.bai", sample=samples),
         hg.replace('fasta', 'dict'),
-        expand(resultdir+"{sample}_raw.vcf", sample=samples),
+        expand(resultdir+"{sample}_filtered_variants.vcf", sample=samples),
     benchmark:
         "benchmarks/benchmark_rule_all_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
@@ -284,8 +286,101 @@ rule HaplotypeCaller:
         
 # Since GATK 3.7 -stand_emit_conf {params.stand_emit_conf} has been deprecated
 
+rule HardFilter_1SNPs:
+    """GATK Hard Filtering Variants"""
+    ## Extract the snps from the call set
+    input:
+        vcf_raw = resultdir+"{sample}_raw.vcf"
+    output:
+        raw_snps = resultdir+"{sample}_snps.vcf"
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        ref=hg,
+        selectType = '-selectType SNP'
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_HardFilter1SNPs_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -o {output.raw_snps}"     
 
+rule HardFilter_2SNPs:
+    """GATK Hard Filtering Variants"""
+    ## Apply the filter to the SNP call set
+    input:
+        raw_snps = resultdir+"{sample}_snps.vcf"
+    output:
+        filt_snps = resultdir+"{sample}_hard_filtered_snps.vcf"
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        ref=hg,
+        filter_exp_snps = filter_exp_snps,
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_HardFilter2SNPs_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_snps} {params.filter_exp_snps} -o {output.filt_snps}"
 
+rule HardFilter_1Indels:
+    """GATK Hard Filtering Variants"""
+    ## Extract the Indels from the call set
+    input:
+        vcf_raw = resultdir+"{sample}_raw.vcf",
+    output:
+        raw_indels = resultdir+"{sample}_indels.vcf"
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        ref=hg,
+        selectType = '-selectType INDEL',
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_HardFilter1Indels_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -o {output.raw_indels}"
+
+rule HardFilter_2Indels:
+    """GATK Hard Filtering Variants"""
+    ## Apply the filter to the Indel call set
+    input:
+        raw_indels = resultdir+"{sample}_indels.vcf",
+    output:
+        filt_indels = resultdir+"{sample}_hard_filtered_indels.vcf"
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        ref=hg,
+        filter_exp_indels = filter_exp_indels,
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_HardFilter2Indels_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_indels} {params.filter_exp_indels} -o {output.filt_indels}"
+
+rule HardFilter_Combine:
+    """GATK Hard Filtering Variants"""
+    ## Combine variants
+    input:
+        filt_snps = resultdir+"{sample}_hard_filtered_snps.vcf",
+        filt_indels = resultdir+"{sample}_hard_filtered_indels.vcf",
+    output:
+        out = resultdir+"{sample}_filtered_variants.vcf"
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        ref=hg,
+    conda:
+        "envs/config_conda.yaml"
+    benchmark:
+        "benchmarks/benchmark_HardFilterCombine_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "java -jar {params.gatk} -T CombineVariants -R {params.ref} --variant:snps {input.filt_snps} --variant:indels {input.filt_indels} -o {output.out} -genotypeMergeOptions PRIORITIZE -priority snps,indels"
+        
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
 ###############################################################################
