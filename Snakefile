@@ -15,13 +15,26 @@ home = os.path.expanduser("~")
 hg = home + config['hg']
 bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
 
+gatk = home + config['gatk']
+#gatk='programs/gatk/GenomeAnalysisTK.jar'
+
 indels_ref = home + config['indels_ref']
 dbsnp = home + config['dbsnp']
-genotyping_mode = config['genotyping_mode']
-stand_emit_conf = config['stand_emit_conf']
-stand_call_conf = config['stand_call_conf']
-filter_exp_snps = config['snps']
-filter_exp_indels = config['indels']
+
+genotyping_mode = config['hap-caller']['genotyping_mode']
+stand_emit_conf = config['hap-caller']['stand_emit_conf']
+stand_call_conf = config['hap-caller']['stand_call_conf']
+
+filter_exp_snps = config['hard-filter']['snps']
+filter_exp_indels = config['hard-filter']['indels']
+
+convert2annovar = home + config['convert2annovar']
+annovar = home + config['annovar']
+humandb = home + config['humandb']
+build_ver = config['build_ver']
+dbsnp_ver = config['dbsnp_ver']
+kg_ver = config['kg_ver']
+mitochondrial_ver = config['mitochondrial_ver']
 
 datadir = 'data/'
 resultdir = 'results/'
@@ -128,8 +141,7 @@ rule realigner_target_creator:
     output:
         resultdir+"{sample}.intervals",
     params:
-        gatk = home + config['gatk'],
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
     conda:
         "envs/config_conda.yaml"
@@ -148,8 +160,7 @@ rule IndelRealigner:
         r_bam=resultdir+"{sample}_realigned.bam",
         r_idx=resultdir+"{sample}_realigned.bai",
     params:
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
         indels_ref=indels_ref
     conda:
@@ -167,8 +178,7 @@ rule BQSR_step_1:
     output:
         resultdir+"{sample}_recal_data.table"
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
         indels_ref=indels_ref
     conda:
@@ -186,8 +196,7 @@ rule BQSR_step_2:
     output:
         resultdir+"{sample}_post_recal_data.table"
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
         indels_ref=indels_ref,
         dbsnp = dbsnp,
@@ -206,8 +215,7 @@ rule BQSR_step_3:
     output:
         plots = resultdir+"{sample}_recalibrationPlots.pdf",
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
     conda:
         "envs/config_conda.yaml"
@@ -225,8 +233,7 @@ rule BQSR_step_4:
         recal_bam = resultdir+"{sample}_recal.bam",
         recal_bai = resultdir+"{sample}_recal.bai",
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
     conda:
         "envs/config_conda.yaml"
@@ -248,8 +255,7 @@ rule BQSR_step_4:
 #        recal_bam = resultdir+"{sample}_recal.bam",
 #        recal_bai = resultdir+"{sample}_recal.bai",
 #    params:  
-#        gatk = home + config['gatk'],    
-#        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+#        gatk = gatk,
 #        ref=hg,
 #        indels_ref=indels_ref
 #    conda:
@@ -271,8 +277,7 @@ rule HaplotypeCaller:
     output:
         vcf_raw = resultdir+"{sample}_raw.vcf"
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
         genotyping_mode = genotyping_mode,
         stand_emit_conf = stand_emit_conf,
@@ -294,8 +299,7 @@ rule HardFilter_1SNPs:
     output:
         raw_snps = resultdir+"{sample}_snps.vcf"
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
         selectType = '-selectType SNP'
     conda:
@@ -313,8 +317,7 @@ rule HardFilter_2SNPs:
     output:
         filt_snps = resultdir+"{sample}_hard_filtered_snps.vcf"
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
         filter_exp_snps = filter_exp_snps,
     conda:
@@ -332,8 +335,7 @@ rule HardFilter_1Indels:
     output:
         raw_indels = resultdir+"{sample}_indels.vcf"
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
         selectType = '-selectType INDEL',
     conda:
@@ -351,8 +353,7 @@ rule HardFilter_2Indels:
     output:
         filt_indels = resultdir+"{sample}_hard_filtered_indels.vcf"
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
         filter_exp_indels = filter_exp_indels,
     conda:
@@ -369,17 +370,95 @@ rule HardFilter_Combine:
         filt_snps = resultdir+"{sample}_hard_filtered_snps.vcf",
         filt_indels = resultdir+"{sample}_hard_filtered_indels.vcf",
     output:
-        out = resultdir+"{sample}_filtered_variants.vcf"
+        vcf_filt = resultdir+"{sample}_filtered_variants.vcf"
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        gatk = gatk,
         ref=hg,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilterCombine_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
-        "java -jar {params.gatk} -T CombineVariants -R {params.ref} --variant:snps {input.filt_snps} --variant:indels {input.filt_indels} -o {output.out} -genotypeMergeOptions PRIORITIZE -priority snps,indels"
+        "java -jar {params.gatk} -T CombineVariants -R {params.ref} --variant:snps {input.filt_snps} --variant:indels {input.filt_indels} -o {output.vcf_filt} -genotypeMergeOptions PRIORITIZE -priority snps,indels"
+
+rule Annotation_convert:
+    # convert to annovar format
+    input:
+        vcf_filt = resultdir+"{sample}_filtered_variants.vcf",
+    output:
+        outfile = resultdir+"{sample}_filtered_variants.annovar"
+    params:  
+        convert2annovar = convert2annovar,
+        fmt = 'vcf4',
+        pars = '',
+    benchmark:
+        "benchmarks/benchmark_Annotationconvert_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "{params.convert2annovar} -format {params.fmt} {input.vcf_filt} -outfile {output.outfile} -includeinfo '-withzyg' -comment {params.pars}"
+    
+rule annovar_filter_dbSNP138:
+    # annotate
+    #dbSNP138
+    input:
+        outfile = resultdir+"{sample}_filtered_variants.annovar",
+    output:
+        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
+    params:  
+        annovar = annovar,
+        humandb = humandb,
+        build_ver = build_ver,
+        dbsnp_ver = dbsnp_ver,
+        mutect = False,
+        pars = ''
+    benchmark:
+        "benchmarks/benchmark_annovarfilterdbSNP138_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "{params.annovar} -filter {input.outfile} -buildver {params.build_ver} -dbtype {params.dbsnp_ver} {params.humandb} {params.pars} && "
+        "awk \'{print $3,$4,$5,$6,$7,$8,$9,'{params.dbsnp_ver}',$2,$19,$20}\'{input.outfile}.{params.build_ver}_{params.dbsnp_ver}_dropped>{output.dbsnp_rmdup}"
+
+### variables
+suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+
+rule annovar_filter_1000g:
+    # annotate
+    #1000g annotation
+    input:
+        outfile = resultdir+"{sample}_filtered_variants.annovar",
+    output:
+        kg_rmdup = resultdir+"{sample}_rmdup.1000g",
+    params:  
+        gatk = home + config['gatk'],    
+        #gatk='programs/gatk/GenomeAnalysisTK.jar',
+        ref=hg,
+        annovar = annovar,
+        humandb = humandb,
+        build_ver = build_ver,
+        dbsnp_ver = dbsnp_ver,
+        kg_ver = kg_ver,
+        mutect = False,
+        pars ='-maf 0.05 -reverse',
+        kg_ann = kg_ann,
+    benchmark:
+        "benchmarks/benchmark_annovarfilter1000g_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "{params.annovar} -filter {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars} && "
+        "awk \'{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}\'{params.kg_ann}>{output.kg_rmdup}"
+
+rule Annotation:
+    input:
+        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
+        kg_rmdup = resultdir+"{sample}_rmdup.1000g",
+    output: 
+        known_file = resultdir+"{sample}_rmdup.known",
+        novel_file = resultdir+"{sample}_rmdup.novel",
+    params:
+        kg_ann = kg_ann,
+    benchmark:
+        "benchmarks/benchmark_Annotation_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file} && "
+        "mv {params.kg_ann} {output.novel_file}"
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
