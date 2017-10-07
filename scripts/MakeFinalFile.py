@@ -15,7 +15,7 @@ def parse_known (fi_known, mutect=False,sample_order=['n','t']):
     tmp = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                         stderr=subprocess.PIPE,shell=True)
     (output, err) = tmp.communicate()
-    known = output.split('\n')
+    known = output.decode("utf-8").split('\n')
     if known[-1] == '':
         known = known[:-1]
     dic = defaultdict(dict)
@@ -58,7 +58,7 @@ def parse_novel (infile,mutect=False,sample_order=['n','t']):
     tmp = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                         stderr=subprocess.PIPE, shell=True)
     (output, err) = tmp.communicate()
-    data = output.split('\n')
+    data = output.decode("utf-8").split('\n')
     if data[-1] == '':
         data = data[:-1]
     dic = defaultdict(dict)
@@ -75,34 +75,34 @@ def parse_novel (infile,mutect=False,sample_order=['n','t']):
             dic[i]['format'] = vec[-3]
             dic[i]['info_n'] = vec[-2]
             dic[i]['info_t'] = vec[-1]
-        else:
-            fmt = 'GT:AD:DP:GQ:PL'
-            cols = ['line', 'type','category','annotation','chr', 'pos.start',
-                    'pos.end','ref.base','alt.base','genotype','QUAL','database',
-                    'name_var', 'format','info']
-            for i in range(len(data)-1):
-                vec = data[i].split('\t')
-                for k in range(len(vec[:11])):
-                    dic[i][cols[k]] = vec[k]
-                dic[i]['format'] = vec[-2]
-                dic[i]['info'] = vec[-1]
-        dt = DataFrame.from_dict(dic, orient='index')
-        dt = dt[dt['format'] == fmt]
-        if mutect:
-            rf = {'t':[],'n':[]}
-            at = {'t':[],'n':[]}
-            gt = [x.split(':')[0] for x in dt['info_t']]
-            dt['genotype'] = [genotype[x] for x in gt]
-            for i in ['t', 'n']:
-                rf[i] = [x.split(':')[1].split(',')[0] for x in dt['info_%s'%i]]
-                at[i] = [x.split(':')[1].split(',')[1] for x in dt['info_%s'%i]]
-                dt['%s_cov.ref'%i] = rf[i]
-                dt['%s_cov.alt'%i] = at[i]        
-        else:
-            dt['cov.ref'] = [x.split(':')[1].split(',')[0] for x in dt['info']]
-            dt['cov.alt'] = [x.split(':')[1].split(',')[1] for x in dt['info']]
-        dt['name_var'] = 'novel'
-        dt['known.flag'] = 0
+    else:
+        fmt = 'GT:AD:DP:GQ:PL'
+        cols = ['line', 'type','category','annotation','chr', 'pos.start',
+                'pos.end','ref.base','alt.base','genotype','QUAL','database',
+                'name_var', 'format','info']
+        for i in range(len(data)-1):
+            vec = data[i].split('\t')
+            for k in range(len(vec[:11])):
+                dic[i][cols[k]] = vec[k]
+            dic[i]['format'] = vec[-2]
+            dic[i]['info'] = vec[-1]
+    dt = DataFrame.from_dict(dic, orient='index')
+    dt = dt[dt['format'] == fmt]
+    if mutect:
+        rf = {'t':[],'n':[]}
+        at = {'t':[],'n':[]}
+        gt = [x.split(':')[0] for x in dt['info_t']]
+        dt['genotype'] = [genotype[x] for x in gt]
+        for i in ['t', 'n']:
+            rf[i] = [x.split(':')[1].split(',')[0] for x in dt['info_%s'%i]]
+            at[i] = [x.split(':')[1].split(',')[1] for x in dt['info_%s'%i]]
+            dt['%s_cov.ref'%i] = rf[i]
+            dt['%s_cov.alt'%i] = at[i]        
+    else:
+        dt['cov.ref'] = [x.split(':')[1].split(',')[0] for x in dt['info']]
+        dt['cov.alt'] = [x.split(':')[1].split(',')[1] for x in dt['info']]
+    dt['name_var'] = 'novel'
+    dt['known.flag'] = 0
     return(dt)
     
    
