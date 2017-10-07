@@ -492,7 +492,7 @@ rule Ann_mitochondrial:
         "benchmarks/benchmark_Annmitochondrial_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
         for ann_file in [{input.known_file}, {input.novel_file}]:
-            shell("{params.annovar} -geneanno"+" {ann_file}".format(ann_file=ann_file)+" -buildver {params.build_ver} {params.humandb}")
+            shell("{params.annovar} -geneanno "+"{ann_file}"+" -buildver {params.build_ver} {params.humandb}")
         shell("{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {input.outfile} {humandb}")
         shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$21,$22,$23}}\' {input.outfile}.exonic_variant_function > {output.mit_rmdup}")
         
