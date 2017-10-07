@@ -484,6 +484,7 @@ rule Ann_mitochondrial:
         ref=hg,
         annovar = annovar,
         humandb = humandb,
+        build_ver = build_ver,
         mutect = False,
         pars ='-maf 0.05 -reverse',
         mitochondrial_ver = mitochondrial_ver,
