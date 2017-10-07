@@ -427,6 +427,7 @@ rule annovar_filter_1000g:
     # annotate
     #1000g annotation
     input:
+        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
         outfile = resultdir+"{sample}_filtered_variants.annovar",
     output:
         kg_rmdup = resultdir+"{sample}_rmdup.1000g",
@@ -462,7 +463,7 @@ rule Annotation:
         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
         shell("cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
-        shell("mv "+"kg_ann".format(kg_ann=kg_ann)+" {output.novel_file}")
+        shell("mv "+"{kg_ann}".format(kg_ann=kg_ann)+" {output.novel_file}")
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
