@@ -49,7 +49,7 @@ rule all:
     input:
         #expand(resultdir+"{sample}_recal.bai", sample=samples),
         hg.replace('fasta', 'dict'),
-        expand(resultdir+"{sample}_rmdup.1000g", sample=samples),
+        expand(resultdir+"{sample}_rmdup.known", sample=samples),
     benchmark:
         "benchmarks/benchmark_rule_all_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
@@ -444,26 +444,25 @@ rule annovar_filter_1000g:
     benchmark:
         "benchmarks/benchmark_annovarfilter1000g_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
-        "subprocess.call('{params.annovar} -filter {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}')
-         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
-         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
-         subprocess.call('awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\' {params.kg_ann}>{output.kg_rmdup}')
-         "
+        shell("{params.annovar} -filter {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}")
+        suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+        kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\' kg_ann>{output.kg_rmdup}")
 
-#rule Annotation:
- #   input:
-  #      dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
-   #     kg_rmdup = resultdir+"{sample}_rmdup.1000g",
-    #output: 
-     #   known_file = resultdir+"{sample}_rmdup.known",
-      #  novel_file = resultdir+"{sample}_rmdup.novel",
-    #params:
-     #   kg_ann = kg_ann,
-    #benchmark:
-     #   "benchmarks/benchmark_Annotation_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    #shell:
-     #   "cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file} && "
-      #  "mv {params.kg_ann} {output.novel_file}"
+rule Annotation:
+    input:
+        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
+        kg_rmdup = resultdir+"{sample}_rmdup.1000g",
+    output: 
+        known_file = resultdir+"{sample}_rmdup.known",
+        novel_file = resultdir+"{sample}_rmdup.novel",
+    benchmark:
+        "benchmarks/benchmark_Annotation_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    run:
+        suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+        kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+        shell("cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file} && ")
+        shell("mv kg_ann {output.novel_file}")
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
