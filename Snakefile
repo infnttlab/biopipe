@@ -504,10 +504,10 @@ rule MakeFinalFile:
     params:
         scripts = scripts,
         mutect = False,
-        sample_order=['n','t'],
-        dbsnp_freq=True,
+        sample_order = ['n','t'],
+        dbsnp_freq = True,
         dbsnpFreq = None,
-        dbsnpAllele=None,    
+        dbsnpAllele = None,    
     benchmark:
         "benchmarks/benchmark_MakeFinalFile_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     script:
