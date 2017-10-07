@@ -49,7 +49,7 @@ rule all:
     input:
         #expand(resultdir+"{sample}_recal.bai", sample=samples),
         hg.replace('fasta', 'dict'),
-        expand(resultdir+"{sample}_filtered_variants.vcf", sample=samples),
+        expand(resultdir+"{sample}_rmdup.1000g", sample=samples),
     benchmark:
         "benchmarks/benchmark_rule_all_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
