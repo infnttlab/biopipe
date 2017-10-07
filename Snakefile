@@ -397,9 +397,10 @@ rule Annotation_convert:
     shell:
         "{params.convert2annovar} -format {params.fmt} {input.vcf_filt} -outfile {output.outfile} -includeinfo '-withzyg' -comment {params.pars}"
 
-#################################################################################
-#./annotate_variation.pl -downdb -buildver hg19 -webfrom annovar snp138 humandb #
-#################################################################################
+###################################################################################
+# ./annotate_variation.pl -downdb -buildver hg19 -webfrom annovar snp138 humandb  #
+# ./annotate_variation.pl -downdb 1000g2012apr humandb -buildver hg19             #
+###################################################################################
     
 rule annovar_filter_dbSNP138:
     # annotate
@@ -421,9 +422,6 @@ rule annovar_filter_dbSNP138:
         "{params.annovar} -filter {input.outfile} -buildver {params.build_ver} -dbtype {params.dbsnp_ver} {params.humandb} {params.pars} && "
         "awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.dbsnp_ver}',$2,$19,$20}}\' {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_dropped > {output.dbsnp_rmdup}"
 
-### variables
-#suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
-#kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
 
 rule annovar_filter_1000g:
     # annotate
@@ -443,12 +441,14 @@ rule annovar_filter_1000g:
         kg_ver = kg_ver,
         mutect = False,
         pars ='-maf 0.05 -reverse',
-        #kg_ann = kg_ann,
     benchmark:
         "benchmarks/benchmark_annovarfilter1000g_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    shell:
-        "{params.annovar} -filter {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars} && "
-        #"awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\' {params.kg_ann}>{output.kg_rmdup}"
+    run:
+        "subprocess.call('{params.annovar} -filter {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}')
+         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+         subprocess.call('awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\' {params.kg_ann}>{output.kg_rmdup}')
+         "
 
 #rule Annotation:
  #   input:
