@@ -12,6 +12,7 @@ n_cpu = config['n_cpu']
 
 import os
 home = os.path.expanduser("~")
+
 hg = home + config['hg']
 bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
 
@@ -287,7 +288,7 @@ rule HaplotypeCaller:
     benchmark:
         "benchmarks/benchmark_HaplotypeCaller_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
-        "java -jar {params.gatk} -T HaplotypeCaller -R {params.ref} -I {input.recal_bam} --genotyping_mode {params.genotyping_mode} -stand_call_conf {params.stand_call_conf} -o {output.vcf_raw}" 
+        "java -jar {params.gatk} -T HaplotypeCaller -R {params.ref} -I {input.recal_bam} --genotyping_mode {params.genotyping_mode} -stand_emit_conf {params.stand_emit_conf} -stand_call_conf {params.stand_call_conf} -o {output.vcf_raw}" 
         
 # Since GATK 3.7 -stand_emit_conf {params.stand_emit_conf} has been deprecated
 
@@ -395,6 +396,10 @@ rule Annotation_convert:
         "benchmarks/benchmark_Annotationconvert_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
         "{params.convert2annovar} -format {params.fmt} {input.vcf_filt} -outfile {output.outfile} -includeinfo '-withzyg' -comment {params.pars}"
+
+#################################################################################
+#./annotate_variation.pl -downdb -buildver hg19 -webfrom annovar snp138 humandb #
+#################################################################################
     
 rule annovar_filter_dbSNP138:
     # annotate
@@ -414,11 +419,11 @@ rule annovar_filter_dbSNP138:
         "benchmarks/benchmark_annovarfilterdbSNP138_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
         "{params.annovar} -filter {input.outfile} -buildver {params.build_ver} -dbtype {params.dbsnp_ver} {params.humandb} {params.pars} && "
-        "awk \'{print $3,$4,$5,$6,$7,$8,$9,'{params.dbsnp_ver}',$2,$19,$20}\'{input.outfile}.{params.build_ver}_{params.dbsnp_ver}_dropped>{output.dbsnp_rmdup}"
+        "awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.dbsnp_ver}',$2,$19,$20}}\' {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_dropped > {output.dbsnp_rmdup}"
 
 ### variables
-suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
-kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+#suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+#kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
 
 rule annovar_filter_1000g:
     # annotate
@@ -438,27 +443,27 @@ rule annovar_filter_1000g:
         kg_ver = kg_ver,
         mutect = False,
         pars ='-maf 0.05 -reverse',
-        kg_ann = kg_ann,
+        #kg_ann = kg_ann,
     benchmark:
         "benchmarks/benchmark_annovarfilter1000g_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
         "{params.annovar} -filter {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars} && "
-        "awk \'{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}\'{params.kg_ann}>{output.kg_rmdup}"
+        #"awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\' {params.kg_ann}>{output.kg_rmdup}"
 
-rule Annotation:
-    input:
-        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
-        kg_rmdup = resultdir+"{sample}_rmdup.1000g",
-    output: 
-        known_file = resultdir+"{sample}_rmdup.known",
-        novel_file = resultdir+"{sample}_rmdup.novel",
-    params:
-        kg_ann = kg_ann,
-    benchmark:
-        "benchmarks/benchmark_Annotation_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    shell:
-        "cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file} && "
-        "mv {params.kg_ann} {output.novel_file}"
+#rule Annotation:
+ #   input:
+  #      dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
+   #     kg_rmdup = resultdir+"{sample}_rmdup.1000g",
+    #output: 
+     #   known_file = resultdir+"{sample}_rmdup.known",
+      #  novel_file = resultdir+"{sample}_rmdup.novel",
+    #params:
+     #   kg_ann = kg_ann,
+    #benchmark:
+     #   "benchmarks/benchmark_Annotation_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    #shell:
+     #   "cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file} && "
+      #  "mv {params.kg_ann} {output.novel_file}"
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
