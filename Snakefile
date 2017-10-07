@@ -455,6 +455,10 @@ rule Annotation:
     output: 
         known_file = resultdir+"{sample}_rmdup.known",
         novel_file = resultdir+"{sample}_rmdup.novel",
+    params:
+        annovar = annovar,
+        humandb = humandb,
+        build_ver = build_ver,
     benchmark:
         "benchmarks/benchmark_Annotation_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
