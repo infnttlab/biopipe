@@ -466,8 +466,6 @@ rule Annotation:
         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
         shell("cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
         shell("mv "+"{kg_ann}".format(kg_ann=kg_ann)+" {output.novel_file}")
-        for ann_file in [{output.known_file}, {output.novel_file}]:
-            shell("{params.annovar} -geneanno {input.ann_file} -buildver {params.build_ver} {params.humandb}")
 
 rule Ann_mitochondrial:
     # annotate
@@ -491,9 +489,11 @@ rule Ann_mitochondrial:
         mitochondrial_ver = mitochondrial_ver,
     benchmark:
         "benchmarks/benchmark_Annmitochondrial_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    shell:
-        "{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {input.outfile} {humandb} && "
-        "awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$21,$22,$23}}\' {input.outfile}.exonic_variant_function > {output.mit_rmdup}"
+    run:
+        for ann_file in [{input.known_file}, {input.novel_file}]:
+            shell("{params.annovar} -geneanno {input.ann_file} -buildver {params.build_ver} {params.humandb}")
+        shell("{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {input.outfile} {humandb}")
+        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$21,$22,$23}}\' {input.outfile}.exonic_variant_function > {output.mit_rmdup}")
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
