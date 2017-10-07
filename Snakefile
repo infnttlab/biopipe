@@ -447,7 +447,7 @@ rule annovar_filter_1000g:
         shell("{params.annovar} -filter {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}")
         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
-        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\' kg_ann>{output.kg_rmdup}")
+        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\'"+" {kg_ann}".format(kg_ann=kg_ann)+" > {output.kg_rmdup}")
 
 rule Annotation:
     input:
@@ -461,8 +461,8 @@ rule Annotation:
     run:
         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
-        shell("cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file} && ")
-        shell("mv kg_ann {output.novel_file}")
+        shell("cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
+        shell("mv "+"kg_ann".format(kg_ann=kg_ann)+" {output.novel_file}")
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
