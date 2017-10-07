@@ -112,7 +112,7 @@ def parse_mit (fi_known,mutect=False,sample_order=['n','t']):
     tmp = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                         stderr=subprocess.PIPE,shell=True)
     (output, err) = tmp.communicate()
-    data = output.split('\n')
+    data = output.decode("utf-8").split('\n')
     ## check if last line is empty
     if data[-1] == '':
         data = data[:-1]
