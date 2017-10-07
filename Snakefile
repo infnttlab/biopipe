@@ -16,6 +16,8 @@ home = os.path.expanduser("~")
 hg = home + config['hg']
 bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
 
+scripts = '.' + config['scripts']
+
 gatk = home + config['gatk']
 #gatk='programs/gatk/GenomeAnalysisTK.jar'
 
@@ -49,7 +51,7 @@ rule all:
     input:
         #expand(resultdir+"{sample}_recal.bai", sample=samples),
         hg.replace('fasta', 'dict'),
-        expand(resultdir+"{sample}.mit", sample=samples),
+        expand(resultdir+"{sample}.tsv", sample=samples),
     benchmark:
         "benchmarks/benchmark_rule_all_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
@@ -475,18 +477,14 @@ rule Ann_mitochondrial:
         known_file = resultdir+"{sample}_rmdup.known",
         novel_file = resultdir+"{sample}_rmdup.novel",
     output:
-        mit_rmdup = resultdir+"{sample}.mit",
         k_f = resultdir+"{sample}_rmdup.known.exonic_variant_function", 
         n_f = resultdir+"{sample}_rmdup.novel.exonic_variant_function",
+        mit_rmdup = resultdir+"{sample}.mit",
     params:  
-        gatk = home + config['gatk'],    
-        #gatk='programs/gatk/GenomeAnalysisTK.jar',
-        ref=hg,
         annovar = annovar,
         humandb = humandb,
         build_ver = build_ver,
         mutect = False,
-        pars ='-maf 0.05 -reverse',
         mitochondrial_ver = mitochondrial_ver,
     benchmark:
         "benchmarks/benchmark_Annmitochondrial_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
@@ -495,6 +493,26 @@ rule Ann_mitochondrial:
             shell("{params.annovar} -geneanno "+"{ann_file}"+" -buildver {params.build_ver} {params.humandb}")
         shell("{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {input.outfile} {humandb}")
         shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$21,$22,$23}}\' {input.outfile}.exonic_variant_function > {output.mit_rmdup}")
+
+rule MakeFinalFile:
+    input:
+        k_f = resultdir+"{sample}_rmdup.known.exonic_variant_function", 
+        n_f = resultdir+"{sample}_rmdup.novel.exonic_variant_function",
+        mit_rmdup = resultdir+"{sample}.mit",
+    output:
+        out = resultdir+"{sample}.tsv",
+    params:
+        scripts = scripts,
+        mutect = False,
+        sample_order=['n','t'],
+        dbsnp_freq=True,
+        dbsnpFreq = None,
+        dbsnpAllele=None,    
+    benchmark:
+        "benchmarks/benchmark_MakeFinalFile_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    script:
+        "{params.scripts}" + "MakeFinalFile.py"
+    
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
