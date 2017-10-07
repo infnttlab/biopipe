@@ -8,6 +8,7 @@ dependencies:
  - picard = 2.9.2
  - bwa
  - samtools
+ - pyvcf
  - java-jdk
  - openjdk
  - r-ggplot2
