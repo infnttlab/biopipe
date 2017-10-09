@@ -729,6 +729,7 @@ rule index_bwa:
         hg,
     output:
         bwa_indexes,
+    priority: 1
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -746,6 +747,7 @@ rule index_picard:
         hg=hg,
     output:
         hg.replace('fasta', 'dict'),
+    priority: 1
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -761,7 +763,8 @@ rule index_samtools:
     input:
         hg=hg,
     output:
-        hg+'.fai'
+        hg+'.fai',
+    priority: 1
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -776,7 +779,7 @@ rule index_samtools:
 rule check_GATK:
     output:
         gatk,
-    priority: 3
+    priority: 4
     shell:
         "echo 'Error. Genome Analysis ToolKit not found in softwares directory.' && "
         "exit 1"
@@ -784,7 +787,7 @@ rule check_GATK:
 #rule check_muTect:
 #    output:
 #        muTect,
-#    priority: 2
+#    priority: 3
 #    shell:
 #        "echo 'Error. muTect not found in softwares directory.' && "
 #        "exit 1"
@@ -792,7 +795,7 @@ rule check_GATK:
 rule check_Annovar:
     output:
         annovar,
-    priority: 1
+    priority: 2
     shell:
         "echo 'Error. Annovar not found in softwares directory.' && "
         "exit 1"
