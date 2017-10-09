@@ -1,51 +1,76 @@
 #snakemake --dag | dot -Tpdf > dag.pdf
 #snakemake --detailed-summary > provenance.tsv
 #snakemake --cores 6 --resources mem=12
-shell.executable("/bin/bash")
 
-configfile: "config.yaml"
+shell.executable("/bin/bash") # The pipeline works only on /bin/bash
 
-n_sim = config['n_sim']
-cpu_type = config['cpu_type']
-thrs = config['threads']
-n_cpu = config['n_cpu']
+configfile: "config.yaml" # Set configuration file
 
+# Extract the main directory
 import os
 home = os.path.expanduser("~")
 
-hg = home + config['hg']
-bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"]
+#####################################
+#  Set parameters from config file  #
+#####################################
 
-scripts = '.' + config['scripts']
+# Label's parameters
+n_sim = config['label_params']['n_sim']
+cpu_type = config['label_params']['cpu_type']
+thrs = config['label_params']['threads']
+n_cpu = config['label_params']['n_cpu']
+ 
+# References
+hg = home + config['ref-files']['hg'] # Human Genome Reference
+bwa_indexes = [hg+".bwt", hg+".pac", hg+".amb", hg+".ann", hg+".sa"] # Indexes for hg
+indels_ref = home + config['ref-files']['indels_ref'] # Set of known indels
+dbsnp = home + config['ref-files']['dbsnp'] # SNP database
+cosmic = home + config['ref-files']['cosmic'] # Catalog of somatic mutation in cancer
+humandb = home + config['ref-files']['humandb'] # Annovar human databases folder
+build_ver = config['ref-files']['build_ver'] # Set build version
+dbsnp_ver = config['ref-files']['dbsnp_ver'] # Set SNP database version
+kg_ver = config['ref-files']['kg_ver'] # Set  version # Set ethnicity groups based on time
+mitochondrial_ver = config['ref-files']['mitochondrial_ver'] # Set parameter command for annotating mitochondria variants
 
-gatk = home + config['gatk']
-#gatk='programs/gatk/GenomeAnalysisTK.jar'
+# Folders
+scripts = config['folders']['scripts']
+datadir = config['folders']['datadir']
+resultdir = config['folders']['resultdir']
 
-indels_ref = home + config['indels_ref']
-dbsnp = home + config['dbsnp']
+# Softwares
+gatk = home + config['softwares']['gatk']
+muTect = home + config['softwares']['muTect']
+annovar = home + config['softwares']['annovar']
+convert2annovar = home + config['softwares']['convert2annovar']
 
-genotyping_mode = config['hap-caller']['genotyping_mode']
-stand_emit_conf = config['hap-caller']['stand_emit_conf']
-stand_call_conf = config['hap-caller']['stand_call_conf']
+# Sample details
+platform = config['sample-details']['platform'] # Set platform for mapping
+library = config['sample-details']['library'] # Set library for mapping
+target = home + config['sample-details']['target'] # Set target intervals for exome analysis
 
-filter_exp_snps = config['hard-filter']['snps']
-filter_exp_indels = config['hard-filter']['indels']
+# HaplotypeCaller parameters
+genotyping_mode = config['hap-caller']['genotyping_mode'] # Set genotyping mode
+stand_emit_conf = config['hap-caller']['stand_emit_conf'] # stand_emit_conf 10.0 means that it won’t report any potential SNPs with a quality below 10.0; 
+stand_call_conf = config['hap-caller']['stand_call_conf'] # but unless they meet the quality threshold set by -stand_call_conf (30.0, in this case), they will be listed as failing the quality filter
 
-convert2annovar = home + config['convert2annovar']
-annovar = home + config['annovar']
-humandb = home + config['humandb']
-build_ver = config['build_ver']
-dbsnp_ver = config['dbsnp_ver']
-kg_ver = config['kg_ver']
-mitochondrial_ver = config['mitochondrial_ver']
+# Hard Filter parameters
+filter_exp_snps = config['hard-filter']['snps'] # Set command to define thresholds for snps
+filter_exp_indels = config['hard-filter']['indels'] # Set command to define thresholds for indels
 
-datadir = 'data/'
-resultdir = 'results/'
+# Annovar databases
+annovar_dbs = [home + config['annovar_dbs']['hg19_db'] , home + config['annovar_dbs']['snp138_db']]
 
+#######################
+#   Get fastq files   #
+#######################
 
 samples = [filename for filename in os.listdir('./'+datadir) if filename.endswith('.fastq')]
 samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
 
+
+#######################
+# Workflow final rule #
+#######################
 
 rule all:
     input:
@@ -61,9 +86,14 @@ rule all:
 #                      GATK-LODn                        #
 #########################################################
 
+#############################
+#        gatk_pipe          #
+#############################
+
+
 rule mapping:
     """
-    this maps the samples to the reference genome.
+    This tool maps the samples to the reference genome.
     It does append a header necessary for the GATK analysis.
     """
     input:
@@ -74,8 +104,8 @@ rule mapping:
         outfile = resultdir+"{sample}.sam",
     params:
         reference = hg,
-        library=config['library'],
-        platform=config['platform'],
+        library = library,
+        platform = platform,
         name = "{sample}",
     conda:
         "envs/config_conda.yaml"
@@ -90,6 +120,9 @@ rule mapping:
 
 
 rule sort_picard:
+    """
+    This tool sorts the input SAM or BAM file by coordinate.
+    """
     input:
         r = resultdir+"{sample}.sam",
     output:
@@ -104,6 +137,9 @@ rule sort_picard:
 
 
 rule mark_duplicates:
+    """
+    This tool locates and tags duplicate reads in a BAM or SAM file, where duplicate reads are defined as originating from a single fragment of DNA. 
+    """
     input:
         r=resultdir+"{sample}_sorted.bam",
     output:
@@ -123,6 +159,9 @@ rule mark_duplicates:
 
 
 rule build_bam_index:
+    """
+    This tool creates an index file for the input BAM that allows fast look-up of data in a BAM file, like an index on a database.
+    """
     input:
         r=resultdir+"{sample}_dedup.bam",
     output:
@@ -136,15 +175,18 @@ rule build_bam_index:
 
 
 rule realigner_target_creator:
+    """
+    This tool defines intervals to target for local realignment.
+    """
     input:
         seq=resultdir+"{sample}_dedup.bam",
         idx=resultdir+"{sample}_dedup.bai",
         ref=hg+'.fai',
-        indels_ref=indels_ref
+        indels_ref=indels_ref,
+        gatk = gatk,
     output:
         resultdir+"{sample}.intervals",
     params:
-        gatk = gatk,
         ref=hg,
     conda:
         "envs/config_conda.yaml"
@@ -152,10 +194,13 @@ rule realigner_target_creator:
         "benchmarks/benchmark_realigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
+        "java -jar {input.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
 
 
 rule IndelRealigner:
+    """
+    This tool performs local realignment of reads around indels.
+    """
     input:
         bam=resultdir+"{sample}_dedup.bam",
         target=resultdir+"{sample}.intervals",
@@ -174,6 +219,10 @@ rule IndelRealigner:
         "java -jar {params.gatk} -T IndelRealigner -R {params.ref} -I {input.bam} -targetIntervals {input.target} -known {params.indels_ref} -o {output.r_bam}"
 
 rule BQSR_step_1:
+    """
+    This tool detects systematic errors in base quality scores.
+    This step produces a recalibrated data table.
+    """
     input:
         r_bam=resultdir+"{sample}_realigned.bam",
         r_idx=resultdir+"{sample}_realigned.bai",
@@ -193,6 +242,10 @@ rule BQSR_step_1:
         "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output}"
 
 rule BQSR_step_2:
+    """
+    This tool detects systematic errors in base quality scores.
+    This step produces a post recalibrated data table.
+    """
     input:
         outtable1=resultdir+"{sample}_recal_data.table",
         r_bam=resultdir+"{sample}_realigned.bam",
@@ -212,6 +265,9 @@ rule BQSR_step_2:
         "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output}"
 
 rule BQSR_step_3:
+    """
+    This tool creates plots to visualize base recalibration results. 
+    """
     input:
         outtable1 = resultdir+"{sample}_recal_data.table",
         outtable2 = resultdir+"{sample}_post_recal_data.table",
@@ -228,6 +284,9 @@ rule BQSR_step_3:
         "java -jar {params.gatk} -T AnalyzeCovariates -R {params.ref} -before {input.outtable1} -after {input.outtable2} -plots {output.plots}"
 
 rule BQSR_step_4:
+    """
+    This tool writes out sequence read data.
+    """
     input:
         outtable1 = resultdir+"{sample}_recal_data.table",
         plots = resultdir+"{sample}_recalibrationPlots.pdf",
@@ -273,7 +332,10 @@ rule BQSR_step_4:
 #        "java -jar {params.gatk} -T PrintReads -R {params.ref} -I {input.r_bam} -BQSR {output.outtable1} -nct {threads} -o {output.recal_bam}"
 
 rule HaplotypeCaller:
-    """GATK Haplotype Caller"""
+    """
+    GATK Hard Filtering Variants
+    This tool calls germline SNPs and indels via local re-assembly of haplotypes.
+    """
     input:
         recal_bam = resultdir+"{sample}_recal.bam",
         recal_bai = resultdir+"{sample}_recal.bai",
@@ -295,8 +357,10 @@ rule HaplotypeCaller:
 # Since GATK 3.7 -stand_emit_conf {params.stand_emit_conf} has been deprecated
 
 rule HardFilter_1SNPs:
-    """GATK Hard Filtering Variants"""
-    ## Extract the snps from the call set
+    """
+    GATK Hard Filtering Variants
+    This tool extracts the snps from the call set.
+    """
     input:
         vcf_raw = resultdir+"{sample}_raw.vcf"
     output:
@@ -313,8 +377,10 @@ rule HardFilter_1SNPs:
         "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -o {output.raw_snps}"     
 
 rule HardFilter_2SNPs:
-    """GATK Hard Filtering Variants"""
-    ## Apply the filter to the SNP call set
+    """
+    GATK Hard Filtering Variants
+    This tool applies the filter to the SNP call set.
+    """
     input:
         raw_snps = resultdir+"{sample}_snps.vcf"
     output:
@@ -331,8 +397,10 @@ rule HardFilter_2SNPs:
         "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_snps} {params.filter_exp_snps} -o {output.filt_snps}"
 
 rule HardFilter_1Indels:
-    """GATK Hard Filtering Variants"""
-    ## Extract the Indels from the call set
+    """
+    GATK Hard Filtering Variants
+    This tool extracts the Indels from the call set.
+    """
     input:
         vcf_raw = resultdir+"{sample}_raw.vcf",
     output:
@@ -349,8 +417,10 @@ rule HardFilter_1Indels:
         "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -o {output.raw_indels}"
 
 rule HardFilter_2Indels:
-    """GATK Hard Filtering Variants"""
-    ## Apply the filter to the Indel call set
+    """
+    GATK Hard Filtering Variants
+    This tool applies the filter to the Indel call set.
+    """
     input:
         raw_indels = resultdir+"{sample}_indels.vcf",
     output:
@@ -367,8 +437,10 @@ rule HardFilter_2Indels:
         "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_indels} {params.filter_exp_indels} -o {output.filt_indels}"
 
 rule HardFilter_Combine:
-    """GATK Hard Filtering Variants"""
-    ## Combine variants
+    """
+    GATK Hard Filtering Variants
+    This tool combines variants.
+    """
     input:
         filt_snps = resultdir+"{sample}_hard_filtered_snps.vcf",
         filt_indels = resultdir+"{sample}_hard_filtered_indels.vcf",
@@ -385,9 +457,12 @@ rule HardFilter_Combine:
         "java -jar {params.gatk} -T CombineVariants -R {params.ref} --variant:snps {input.filt_snps} --variant:indels {input.filt_indels} -o {output.vcf_filt} -genotypeMergeOptions PRIORITIZE -priority snps,indels"
 
 rule Annotation_convert:
-    # convert to annovar format
+    """
+    This step converts to annovar format the vcf files.
+    """
     input:
         vcf_filt = resultdir+"{sample}_filtered_variants.vcf",
+        annovar_dbs = annovar_dbs,
     output:
         outfile = resultdir+"{sample}_filtered_variants.annovar"
     params:  
@@ -399,14 +474,11 @@ rule Annotation_convert:
     shell:
         "{params.convert2annovar} -format {params.fmt} {input.vcf_filt} -outfile {output.outfile} -includeinfo '-withzyg' -comment {params.pars}"
 
-###################################################################################
-# ./annotate_variation.pl -downdb -buildver hg19 -webfrom annovar snp138 humandb  #
-# ./annotate_variation.pl -downdb 1000g2012apr humandb -buildver hg19             #
-###################################################################################
     
 rule annovar_filter_dbSNP138:
-    # annotate
-    #dbSNP138
+    """
+    This step annotate variants based on dbSNP138.
+    """
     input:
         outfile = resultdir+"{sample}_filtered_variants.annovar",
     output:
@@ -426,8 +498,9 @@ rule annovar_filter_dbSNP138:
 
 
 rule annovar_filter_1000g:
-    # annotate
-    #1000g annotation
+    """
+    This step annotate variants based on 1000g database.
+    """
     input:
         dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
         outfile = resultdir+"{sample}_filtered_variants.annovar",
@@ -450,7 +523,9 @@ rule annovar_filter_1000g:
         shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\'"+" {kg_ann}".format(kg_ann=kg_ann)+" > {output.kg_rmdup}")
 
 rule Annotation:
-    ## Gene-based annotation
+    """
+    Gene-based annotation.
+    """
     input:
         dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
         kg_rmdup = resultdir+"{sample}_rmdup.1000g",
@@ -470,8 +545,9 @@ rule Annotation:
         shell("mv "+"{kg_ann}".format(kg_ann=kg_ann)+" {output.novel_file}")
 
 rule Ann_mitochondrial:
-    # annotate
-    # Mitochondrial Annotation
+    """
+    Mitochondrial Annotation.
+    """
     input:
         outfile = resultdir+"{sample}_filtered_variants.annovar",
         known_file = resultdir+"{sample}_rmdup.known",
@@ -495,6 +571,9 @@ rule Ann_mitochondrial:
         shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$21,$22,$23}}\' {input.outfile}.exonic_variant_function > {output.mit_rmdup}")
 
 rule MakeFinalFile:
+    """
+    This step makes the final file.
+    """
     input:
         k_f = resultdir+"{sample}_rmdup.known.exonic_variant_function", 
         n_f = resultdir+"{sample}_rmdup.novel.exonic_variant_function",
@@ -512,7 +591,31 @@ rule MakeFinalFile:
         "benchmarks/benchmark_MakeFinalFile_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     script:
         "{params.scripts}" + "MakeFinalFile.py"
-    
+
+
+##############################
+#        mutect_pipe         #
+##############################
+
+#rule muTect:
+#    input:
+#        muTect,
+#        ref = hg,
+#        dbsnp,
+#        cosmic,
+#        target,
+#        normal = ,
+#        tumor = ,
+#    output:
+#        vcf = resultdir+"{sample}_mutect.vcf",
+#        coverage_out = resultdir+"{sample}_coverage.wig",
+#    benchmark:
+#        "benchmarks/benchmark_muTect_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    shell:
+#        "{input.muTect} --analysis_type MuTect --reference_sequence {params.ref} --cosmic {input.cosmic} --intervals {input.target} --input_file:normal {input.normal} --input_file:tumor {input.tumor} --vcf {output.vcf} --coverage_file {output.coverage_out}"
+
+
+   
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
@@ -586,12 +689,42 @@ rule gunzip_dbsnp:
 
 
 # https://downloads.sourceforge.net/project/bio-bwa/bwakit/bwakit-0.7.12_x64-linux.tar.bz2
+
+rule download_cosmic:
+    """download  cosmic from broadinstitute"""
+    output:
+        cosmic,
+    shell:
+        "wget http://www.broadinstitute.org/cancer/cga/sites/default/files/data/tools/mutect/b37_cosmic_v54_120711.vcf && "
+        "mv b37_cosmic_v54_120711.vcf {output.cosmic}"
+
+rule download_target:
+    """download target from illumina"""
+    output:
+        target,
+    shell:
+        "wget https://support.illumina.com/content/dam/illumina-support/documents/documentation/chemistry_documentation/samplepreps_nextera/nexterarapidcapture/nexterarapidcapture_expandedexome_targetedregions.bed && "
+        "mv nexterarapidcapture_expandedexome_targetedregions.bed {output.target}"
+
+
+rule download_annovar_databases:
+    input:
+        annovar,
+    output:
+        annovar_dbs,
+    shell:
+        "{input.annovar} -downdb -buildver hg19 -webfrom annovar snp138 humandb && "
+        "{input.annovar} -downdb 1000g2012apr humandb -buildver hg19"
+  
+        
 #########################################################
 #                   REFERENCE INDEXING                  #
 #########################################################
 
 rule index_bwa:
-    """generate the index of the reference genome for the bwa program"""
+    """
+    Generate the index of the reference genome for the bwa program.
+    """
     input:
         hg,
     output:
@@ -606,7 +739,9 @@ rule index_bwa:
 
 
 rule index_picard:
-    """generate the index of the reference genome for the picard program"""
+    """
+    Generate the index of the reference genome for the picard program.
+    """
     input:
         hg=hg,
     output:
@@ -620,7 +755,9 @@ rule index_picard:
 
 
 rule index_samtools:
-    """generate the index of the reference genome for the samtools and gatk programs"""
+    """
+    Generate the index of the reference genome for the samtools and gatk programs.
+    """
     input:
         hg=hg,
     output:
@@ -632,7 +769,34 @@ rule index_samtools:
     shell:
         "samtools faidx {input.hg} "
 
+#########################################################
+#                   CHECKING REQUIREMENTS               #
+#########################################################
 
+rule check_GATK:
+    output:
+        gatk,
+    priority: 3
+    shell:
+        "echo 'Error. Genome Analysis ToolKit not found in softwares directory.' && "
+        "exit 1"
+
+#rule check_muTect:
+#    output:
+#        muTect,
+#    priority: 2
+#    shell:
+#        "echo 'Error. muTect not found in softwares directory.' && "
+#        "exit 1"
+
+rule check_Annovar:
+    output:
+        annovar,
+    priority: 1
+    shell:
+        "echo 'Error. Annovar not found in softwares directory.' && "
+        "exit 1"
+        
 #########################################################
 #                        THE END                        #
 #########################################################
