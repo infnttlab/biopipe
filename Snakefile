@@ -75,7 +75,6 @@ samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
 rule all:
     input:
         #expand(resultdir+"{sample}_recal.bai", sample=samples),
-        hg.replace('fasta', 'dict'),
         expand(resultdir+"{sample}.tsv", sample=samples),
     benchmark:
         "benchmarks/benchmark_rule_all_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
@@ -179,7 +178,7 @@ rule realigner_target_creator:
     This tool defines intervals to target for local realignment.
     """
     input:
-        seq=resultdir+"{sample}_dedup.bam",
+        hg.replace('fasta', 'dict'),
         idx=resultdir+"{sample}_dedup.bai",
         ref=hg+'.fai',
         indels_ref=indels_ref,
@@ -187,6 +186,7 @@ rule realigner_target_creator:
     output:
         resultdir+"{sample}.intervals",
     params:
+        seq=resultdir+"{sample}_dedup.bam",
         ref=hg,
     conda:
         "envs/config_conda.yaml"
@@ -194,7 +194,7 @@ rule realigner_target_creator:
         "benchmarks/benchmark_realigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {input.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
+        "java -jar {input.gatk} -T RealignerTargetCreator -R {params.ref} -I {params.seq} -known {input.indels_ref} -nt {threads} -o {output}"
 
 
 rule IndelRealigner:
@@ -202,7 +202,6 @@ rule IndelRealigner:
     This tool performs local realignment of reads around indels.
     """
     input:
-        bam=resultdir+"{sample}_dedup.bam",
         target=resultdir+"{sample}.intervals",
     output:
         r_bam=resultdir+"{sample}_realigned.bam",
@@ -210,13 +209,14 @@ rule IndelRealigner:
     params:
         gatk = gatk,
         ref=hg,
-        indels_ref=indels_ref
+        indels_ref=indels_ref,
+        bam=resultdir+"{sample}_dedup.bam",
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_indelrealigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
-        "java -jar {params.gatk} -T IndelRealigner -R {params.ref} -I {input.bam} -targetIntervals {input.target} -known {params.indels_ref} -o {output.r_bam}"
+        "java -jar {params.gatk} -T IndelRealigner -R {params.ref} -I {params.bam} -targetIntervals {input.target} -known {params.indels_ref} -o {output.r_bam}"
 
 rule BQSR_step_1:
     """
@@ -248,7 +248,6 @@ rule BQSR_step_2:
     """
     input:
         outtable1=resultdir+"{sample}_recal_data.table",
-        r_bam=resultdir+"{sample}_realigned.bam",
     output:
         resultdir+"{sample}_post_recal_data.table"
     params:  
@@ -256,54 +255,55 @@ rule BQSR_step_2:
         ref=hg,
         indels_ref=indels_ref,
         dbsnp = dbsnp,
+        r_bam=resultdir+"{sample}_realigned.bam",
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR2_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output}"
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {params.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output}"
 
 rule BQSR_step_3:
     """
     This tool creates plots to visualize base recalibration results. 
     """
     input:
-        outtable1 = resultdir+"{sample}_recal_data.table",
         outtable2 = resultdir+"{sample}_post_recal_data.table",
     output:
         plots = resultdir+"{sample}_recalibrationPlots.pdf",
     params:  
         gatk = gatk,
         ref=hg,
+        outtable1 = resultdir+"{sample}_recal_data.table",
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR3_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
-        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.ref} -before {input.outtable1} -after {input.outtable2} -plots {output.plots}"
+        "java -jar {params.gatk} -T AnalyzeCovariates -R {params.ref} -before {params.outtable1} -after {input.outtable2} -plots {output.plots}"
 
 rule BQSR_step_4:
     """
     This tool writes out sequence read data.
     """
     input:
-        outtable1 = resultdir+"{sample}_recal_data.table",
         plots = resultdir+"{sample}_recalibrationPlots.pdf",
-        r_bam = resultdir+"{sample}_realigned.bam",
     output:
         recal_bam = resultdir+"{sample}_recal.bam",
         recal_bai = resultdir+"{sample}_recal.bai",
     params:  
         gatk = gatk,
         ref=hg,
+        r_bam = resultdir+"{sample}_realigned.bam",
+        outtable1 = resultdir+"{sample}_recal_data.table",
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR4_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T PrintReads -R {params.ref} -I {input.r_bam} -BQSR {input.outtable1} -nct {threads} -o {output.recal_bam}"
+        "java -jar {params.gatk} -T PrintReads -R {params.ref} -I {params.r_bam} -BQSR {params.outtable1} -nct {threads} -o {output.recal_bam}"
 
 #rule BQSR:
 #    input:
@@ -503,7 +503,6 @@ rule annovar_filter_1000g:
     """
     input:
         dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
-        outfile = resultdir+"{sample}_filtered_variants.annovar",
     output:
         kg_rmdup = resultdir+"{sample}_rmdup.1000g",
     params:
@@ -514,10 +513,11 @@ rule annovar_filter_1000g:
         kg_ver = kg_ver,
         mutect = False,
         pars ='-maf 0.05 -reverse',
+        outfile = resultdir+"{sample}_filtered_variants.annovar",
     benchmark:
         "benchmarks/benchmark_annovarfilter1000g_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
-        shell("{params.annovar} -filter {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}")
+        shell("{params.annovar} -filter {params.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}")
         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
         shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\'"+" {kg_ann}".format(kg_ann=kg_ann)+" > {output.kg_rmdup}")
@@ -527,7 +527,6 @@ rule Annotation:
     Gene-based annotation.
     """
     input:
-        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
         kg_rmdup = resultdir+"{sample}_rmdup.1000g",
     output: 
         known_file = resultdir+"{sample}_rmdup.known",
@@ -536,12 +535,13 @@ rule Annotation:
         annovar = annovar,
         humandb = humandb,
         build_ver = build_ver,
+        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
     benchmark:
         "benchmarks/benchmark_Annotation_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
-        shell("cat {input.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
+        shell("cat {params.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
         shell("mv "+"{kg_ann}".format(kg_ann=kg_ann)+" {output.novel_file}")
 
 rule Ann_mitochondrial:
@@ -549,7 +549,6 @@ rule Ann_mitochondrial:
     Mitochondrial Annotation.
     """
     input:
-        outfile = resultdir+"{sample}_filtered_variants.annovar",
         known_file = resultdir+"{sample}_rmdup.known",
         novel_file = resultdir+"{sample}_rmdup.novel",
     output:
@@ -562,13 +561,14 @@ rule Ann_mitochondrial:
         build_ver = build_ver,
         mutect = False,
         mitochondrial_ver = mitochondrial_ver,
+        outfile = resultdir+"{sample}_filtered_variants.annovar",
     benchmark:
         "benchmarks/benchmark_Annmitochondrial_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
         for ann_file in [{input.known_file}, {input.novel_file}]:
             shell("{params.annovar} -geneanno "+"{ann_file}"+" -buildver {params.build_ver} {params.humandb}")
-        shell("{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {input.outfile} {humandb}")
-        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$21,$22,$23}}\' {input.outfile}.exonic_variant_function > {output.mit_rmdup}")
+        shell("{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {params.outfile} {humandb}")
+        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$21,$22,$23}}\' {params.outfile}.exonic_variant_function > {output.mit_rmdup}")
 
 rule MakeFinalFile:
     """
@@ -729,7 +729,6 @@ rule index_bwa:
         hg,
     output:
         bwa_indexes,
-    priority: 1
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -747,7 +746,6 @@ rule index_picard:
         hg=hg,
     output:
         hg.replace('fasta', 'dict'),
-    priority: 1
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -764,7 +762,6 @@ rule index_samtools:
         hg=hg,
     output:
         hg+'.fai',
-    priority: 1
     conda:
         "envs/config_conda.yaml"
     benchmark:
