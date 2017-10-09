@@ -74,8 +74,6 @@ samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
 
 rule all:
     input:
-        gatk = gatk,
-        annovar = annovar,
         #expand(resultdir+"{sample}_recal.bai", sample=samples),
         hg.replace('fasta', 'dict'),
         expand(resultdir+"{sample}.tsv", sample=samples),
