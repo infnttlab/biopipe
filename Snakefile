@@ -183,10 +183,10 @@ rule realigner_target_creator:
         idx=resultdir+"{sample}_dedup.bai",
         ref=hg+'.fai',
         indels_ref=indels_ref,
+        gatk = gatk,
     output:
         resultdir+"{sample}.intervals",
     params:
-        gatk = gatk,
         ref=hg,
     conda:
         "envs/config_conda.yaml"
@@ -194,7 +194,7 @@ rule realigner_target_creator:
         "benchmarks/benchmark_realigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
+        "java -jar {input.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
 
 
 rule IndelRealigner:
@@ -462,6 +462,7 @@ rule Annotation_convert:
     """
     input:
         vcf_filt = resultdir+"{sample}_filtered_variants.vcf",
+        annovar_dbs = annovar_dbs,
     output:
         outfile = resultdir+"{sample}_filtered_variants.annovar"
     params:  
@@ -598,6 +599,7 @@ rule MakeFinalFile:
 
 #rule muTect:
 #    input:
+#        muTect,
 #        ref = hg,
 #        dbsnp,
 #        cosmic,
@@ -625,10 +627,6 @@ rule MakeFinalFile:
 
 rule download_reference:
     """download the hg19 human reference genome from 1000genome"""
-    input:
-        gatk = gatk,
-        #muTect = muTect,
-        annovar_dbs = annovar_dbs,
     output:
         zipped = hg+'.gz',
     version: 0.1
@@ -778,6 +776,7 @@ rule index_samtools:
 rule check_GATK:
     output:
         gatk,
+    priority: 3
     shell:
         "echo 'Error. Genome Analysis ToolKit not found in softwares directory.' && "
         "exit 1"
@@ -793,6 +792,7 @@ rule check_GATK:
 rule check_Annovar:
     output:
         annovar,
+    priority: 1
     shell:
         "echo 'Error. Annovar not found in softwares directory.' && "
         "exit 1"
