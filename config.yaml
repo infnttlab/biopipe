@@ -12,7 +12,7 @@ ref-files:
     dbsnp: '/data_ref/dbsnp_138.b37.vcf' # SNPs database
     cosmic: '/data_ref/b37_cosmic_v54_120711.vcf' # Catalog of somatic mutation in cancer
     ## For Annovar
-    humandb: '/softwares/annovar/annovar/humandb' # Annovar human databases folder
+    humandb: '/softwares/annovar/humandb' # Annovar human databases folder
     build_ver: 'hg19' # Set build version
     dbsnp_ver: 'snp138' # Set SNP database version
     kg_ver: '1000g2012apr_all' # Set ethnicity groups based on time

@@ -709,12 +709,14 @@ rule download_target:
 
 rule download_annovar_databases:
     input:
-        annovar,
+        annovar = annovar,
     output:
         annovar_dbs,
+    params:
+        humandb = humandb,
     shell:
-        "{input.annovar} -downdb -buildver hg19 -webfrom annovar snp138 humandb && "
-        "{input.annovar} -downdb 1000g2012apr humandb -buildver hg19"
+        "{input.annovar} -downdb -buildver hg19 -webfrom annovar snp138 {params.humandb} && "
+        "{input.annovar} -downdb 1000g2012apr {params.humandb} -buildver hg19"
   
         
 #########################################################
