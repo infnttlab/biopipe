@@ -20,8 +20,10 @@ ref-files:
 
 folders:
     scripts: 'scripts/'
-    datadir : 'data/'
-    resultdir : 'results/'
+    datadir: 'data/'
+    datadir_normal : '/data_ref/normal_sample/'
+    datadir_tumour : '/data_ref/tumour_sample/'
+    resultdir: 'results/'
 
 softwares:
     gatk: '/softwares/GenomeAnalysisTK.jar'
