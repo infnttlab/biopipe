@@ -155,10 +155,20 @@ def parse_mit (fi_known,mutect=False,sample_order=['n','t']):
     dt['name_var'] = 'Mit'
     dt['known.flag'] = 0
     return(dt)
+
+def get_order_vcf (normal_name, infile):
+    
+    for line in open(infile,'r').readlines():
+        if line.startswith('#CHROM'):
+            order = line.rstrip().split('\t')[-2:]
+            if order.index(normal_name) == 1:
+                return(['t','n'])
+            if order.index(normal_name) == 0:
+                return(['n','t'])
     
 def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
                    sample_order=['n','t'],dbsnp_freq=True, dbsnpFreq = None,
-                   dbsnpAllele=None):
+                   dbsnpAllele=None,code=None, vcf=None):
     
     ## defining column names
     cols = []
@@ -169,7 +179,9 @@ def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
     else:
         cols = ['name_var','type','chr', 'pos.start', 'pos.end','ref.base',
                 'alt.base','genotype','annotation','cov.ref','cov.alt']
-    
+    if mutect:
+        sample_order = get_order_vcf (code, vcf)
+        
     test_size = 0
     for i in [fi_novel, fi_known, fi_mit]:
         test_size += os.path.getsize(i)
@@ -231,4 +243,4 @@ def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
 
 MakeFinalFile (snakemake.input['k_f'],snakemake.input['n_f'],snakemake.input['mit_rmdup'],snakemake.output['out'],snakemake.params['mutect'],
                    snakemake.params['sample_order'],snakemake.params['dbsnp_freq'], snakemake.params['dbsnpFreq'],
-                   snakemake.params['dbsnpAllele'])
+                   snakemake.params['dbsnpAllele'], snakemake.params['code'],snakemake.params['vcf'])
