@@ -64,8 +64,19 @@ annovar_dbs = [home + config['annovar_dbs']['hg19_db'] , home + config['annovar_
 #   Get fastq files   #
 #######################
 
-samples = [filename for filename in os.listdir('./'+datadir) if filename.endswith('.fastq')]
+list_of_dirs = [config['folders']['datadir'], home + config['folders']['datadir_normal'], home + config['folders']['datadir_tumour']]
+samples = [Dir+filename for Dir in list_of_dirs for filename in os.listdir(Dir) if filename.endswith('.fastq')]
 samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
+#samples_directory = {}
+#for Dir in (list_of_dirs):
+#    for filename in os.listdir(Dir):
+#       if filename.endswith('.fastq'):
+#           filename = "_".join(filename.split('_')[:-1])
+#           samples_directory[filename] = Dir
+
+#samples = [filename for filename in os.listdir('./'+datadir) if filename.endswith('.fastq')]
+#samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
+
 
 
 #######################
@@ -97,15 +108,15 @@ rule mapping:
     """
     input:
         bwa_indexes,
-        sample1 = datadir+"{sample}_1.fastq",
-        sample2 = datadir+"{sample}_2.fastq",
+        sample1 = "{sample}_1.fastq",
+        sample2 = "{sample}_2.fastq",
     output:
-        outfile = resultdir+"{sample}.sam",
+        outfile = resultdir+"{sample}".split('/')[-1]+".sam",
     params:
         reference = hg,
         library = library,
         platform = platform,
-        name = "{sample}",
+        name = "{sample}".split('/')[-1],
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -123,9 +134,9 @@ rule sort_picard:
     This tool sorts the input SAM or BAM file by coordinate.
     """
     input:
-        r = resultdir+"{sample}.sam",
+        r = resultdir+"{sample}".split('/')[-1]+".sam",
     output:
-        resultdir+"{sample}_sorted.bam",
+        resultdir+"{sample}".split('/')[-1]+"_sorted.bam",
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -140,12 +151,12 @@ rule mark_duplicates:
     This tool locates and tags duplicate reads in a BAM or SAM file, where duplicate reads are defined as originating from a single fragment of DNA. 
     """
     input:
-        r=resultdir+"{sample}_sorted.bam",
+        r=resultdir+"{sample}".split('/')[-1]+"_sorted.bam",
     output:
-        resultdir+"{sample}_dedup.bam",
+        resultdir+"{sample}".split('/')[-1]+"_dedup.bam",
     params:
         outdir=resultdir,
-        metricsfile=resultdir+"{sample}_dedup.metrics.txt",
+        metricsfile=resultdir+"{sample}".split('/')[-1]+"_dedup.metrics.txt",
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -162,9 +173,9 @@ rule build_bam_index:
     This tool creates an index file for the input BAM that allows fast look-up of data in a BAM file, like an index on a database.
     """
     input:
-        r=resultdir+"{sample}_dedup.bam",
+        r=resultdir+"{sample}".split('/')[-1]+"_dedup.bam",
     output:
-        resultdir+"{sample}_dedup.bai",
+        resultdir+"{sample}".split('/')[-1]+"_dedup.bai",
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -179,14 +190,14 @@ rule realigner_target_creator:
     """
     input:
         hg.replace('fasta', 'dict'),
-        idx=resultdir+"{sample}_dedup.bai",
+        idx=resultdir+"{sample}".split('/')[-1]+"_dedup.bai",
         ref=hg+'.fai',
         indels_ref=indels_ref,
         gatk = gatk,
     output:
-        resultdir+"{sample}.intervals",
+        resultdir+"{sample}".split('/')[-1]+".intervals",
     params:
-        seq=resultdir+"{sample}_dedup.bam",
+        seq=resultdir+"{sample}".split('/')[-1]+"_dedup.bam",
         ref=hg,
     conda:
         "envs/config_conda.yaml"
@@ -202,15 +213,15 @@ rule IndelRealigner:
     This tool performs local realignment of reads around indels.
     """
     input:
-        target=resultdir+"{sample}.intervals",
+        target=resultdir+"{sample}".split('/')[-1]+".intervals",
     output:
-        r_bam=resultdir+"{sample}_realigned.bam",
-        r_idx=resultdir+"{sample}_realigned.bai",
+        r_bam=resultdir+"{sample}".split('/')[-1]+"_realigned.bam",
+        r_idx=resultdir+"{sample}".split('/')[-1]+"_realigned.bai",
     params:
         gatk = gatk,
         ref=hg,
         indels_ref=indels_ref,
-        bam=resultdir+"{sample}_dedup.bam",
+        bam=resultdir+"{sample}".split('/')[-1]+"_dedup.bam",
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -224,11 +235,11 @@ rule BQSR_step_1:
     This step produces a recalibrated data table.
     """
     input:
-        r_bam=resultdir+"{sample}_realigned.bam",
-        r_idx=resultdir+"{sample}_realigned.bai",
+        r_bam=resultdir+"{sample}".split('/')[-1]+"_realigned.bam",
+        r_idx=resultdir+"{sample}".split('/')[-1]+"_realigned.bai",
         dbsnp = dbsnp,
     output:
-        resultdir+"{sample}_recal_data.table"
+        resultdir+"{sample}".split('/')[-1]+"_recal_data.table"
     params:  
         gatk = gatk,
         ref=hg,
@@ -247,15 +258,15 @@ rule BQSR_step_2:
     This step produces a post recalibrated data table.
     """
     input:
-        outtable1=resultdir+"{sample}_recal_data.table",
+        outtable1=resultdir+"{sample}".split('/')[-1]+"_recal_data.table",
     output:
-        resultdir+"{sample}_post_recal_data.table"
+        resultdir+"{sample}".split('/')[-1]+"_post_recal_data.table"
     params:  
         gatk = gatk,
         ref=hg,
         indels_ref=indels_ref,
         dbsnp = dbsnp,
-        r_bam=resultdir+"{sample}_realigned.bam",
+        r_bam=resultdir+"{sample}".split('/')[-1]+"_realigned.bam",
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -269,13 +280,13 @@ rule BQSR_step_3:
     This tool creates plots to visualize base recalibration results. 
     """
     input:
-        outtable2 = resultdir+"{sample}_post_recal_data.table",
+        outtable2 = resultdir+"{sample}".split('/')[-1]+"_post_recal_data.table",
     output:
-        plots = resultdir+"{sample}_recalibrationPlots.pdf",
+        plots = resultdir+"{sample}".split('/')[-1]+"_recalibrationPlots.pdf",
     params:  
         gatk = gatk,
         ref=hg,
-        outtable1 = resultdir+"{sample}_recal_data.table",
+        outtable1 = resultdir+"{sample}".split('/')[-1]+"_recal_data.table",
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -288,15 +299,15 @@ rule BQSR_step_4:
     This tool writes out sequence read data.
     """
     input:
-        plots = resultdir+"{sample}_recalibrationPlots.pdf",
+        plots = resultdir+"{sample}".split('/')[-1]+"_recalibrationPlots.pdf",
     output:
-        recal_bam = resultdir+"{sample}_recal.bam",
-        recal_bai = resultdir+"{sample}_recal.bai",
+        recal_bam = resultdir+"{sample}".split('/')[-1]+"_recal.bam",
+        recal_bai = resultdir+"{sample}".split('/')[-1]+"_recal.bai",
     params:  
         gatk = gatk,
         ref=hg,
-        r_bam = resultdir+"{sample}_realigned.bam",
-        outtable1 = resultdir+"{sample}_recal_data.table",
+        r_bam = resultdir+"{sample}".split('/')[-1]+"_realigned.bam",
+        outtable1 = resultdir+"{sample}".split('/')[-1]+"_recal_data.table",
     conda:
         "envs/config_conda.yaml"
     benchmark:
@@ -307,15 +318,15 @@ rule BQSR_step_4:
 
 #rule BQSR:
 #    input:
-#        r_bam=resultdir+"{sample}_realigned.bam",
-#        r_idx=resultdir+"{sample}_realigned.bai",
+#        r_bam=resultdir+"{sample}".split('/')[-1]+"_realigned.bam",
+#        r_idx=resultdir+"{sample}".split('/')[-1]+"_realigned.bai",
 #        dbsnp = dbsnp,
 #    output:
-#        outtable1 = resultdir+"{sample}_recal_data.table",
-#        outtable2 = resultdir+"{sample}_post_recal_data.table",
-#        plots = resultdir+"{sample}_recalibrationPlots.pdf",
-#        recal_bam = resultdir+"{sample}_recal.bam",
-#        recal_bai = resultdir+"{sample}_recal.bai",
+#        outtable1 = resultdir+"{sample}".split('/')[-1]+"_recal_data.table",
+#        outtable2 = resultdir+"{sample}".split('/')[-1]+"_post_recal_data.table",
+#        plots = resultdir+"{sample}".split('/')[-1]+"_recalibrationPlots.pdf",
+#        recal_bam = resultdir+"{sample}".split('/')[-1]+"_recal.bam",
+#        recal_bai = resultdir+"{sample}".split('/')[-1]+"_recal.bai",
 #    params:  
 #        gatk = gatk,
 #        ref=hg,
@@ -337,10 +348,10 @@ rule HaplotypeCaller:
     This tool calls germline SNPs and indels via local re-assembly of haplotypes.
     """
     input:
-        recal_bam = resultdir+"{sample}_recal.bam",
-        recal_bai = resultdir+"{sample}_recal.bai",
+        recal_bam = resultdir+"{sample}".split('/')[-1]+"_recal.bam",
+        recal_bai = resultdir+"{sample}".split('/')[-1]+"_recal.bai",
     output:
-        vcf_raw = resultdir+"{sample}_raw.vcf"
+        vcf_raw = resultdir+"{sample}".split('/')[-1]+"_raw.vcf"
     params:  
         gatk = gatk,
         ref=hg,
@@ -362,9 +373,9 @@ rule HardFilter_1SNPs:
     This tool extracts the snps from the call set.
     """
     input:
-        vcf_raw = resultdir+"{sample}_raw.vcf"
+        vcf_raw = resultdir+"{sample}".split('/')[-1]+"_raw.vcf"
     output:
-        raw_snps = resultdir+"{sample}_snps.vcf"
+        raw_snps = resultdir+"{sample}".split('/')[-1]+"_snps.vcf"
     params:  
         gatk = gatk,
         ref=hg,
@@ -382,9 +393,9 @@ rule HardFilter_2SNPs:
     This tool applies the filter to the SNP call set.
     """
     input:
-        raw_snps = resultdir+"{sample}_snps.vcf"
+        raw_snps = resultdir+"{sample}".split('/')[-1]+"_snps.vcf"
     output:
-        filt_snps = resultdir+"{sample}_hard_filtered_snps.vcf"
+        filt_snps = resultdir+"{sample}".split('/')[-1]+"_hard_filtered_snps.vcf"
     params:  
         gatk = gatk,
         ref=hg,
@@ -402,9 +413,9 @@ rule HardFilter_1Indels:
     This tool extracts the Indels from the call set.
     """
     input:
-        vcf_raw = resultdir+"{sample}_raw.vcf",
+        vcf_raw = resultdir+"{sample}".split('/')[-1]+"_raw.vcf",
     output:
-        raw_indels = resultdir+"{sample}_indels.vcf"
+        raw_indels = resultdir+"{sample}".split('/')[-1]+"_indels.vcf"
     params:  
         gatk = gatk,
         ref=hg,
@@ -422,9 +433,9 @@ rule HardFilter_2Indels:
     This tool applies the filter to the Indel call set.
     """
     input:
-        raw_indels = resultdir+"{sample}_indels.vcf",
+        raw_indels = resultdir+"{sample}".split('/')[-1]+"_indels.vcf",
     output:
-        filt_indels = resultdir+"{sample}_hard_filtered_indels.vcf"
+        filt_indels = resultdir+"{sample}".split('/')[-1]+"_hard_filtered_indels.vcf"
     params:  
         gatk = gatk,
         ref=hg,
@@ -442,10 +453,10 @@ rule HardFilter_Combine:
     This tool combines variants.
     """
     input:
-        filt_snps = resultdir+"{sample}_hard_filtered_snps.vcf",
-        filt_indels = resultdir+"{sample}_hard_filtered_indels.vcf",
+        filt_snps = resultdir+"{sample}".split('/')[-1]+"_hard_filtered_snps.vcf",
+        filt_indels = resultdir+"{sample}".split('/')[-1]+"_hard_filtered_indels.vcf",
     output:
-        vcf_filt = resultdir+"{sample}_filtered_variants.vcf"
+        vcf_filt = resultdir+"{sample}".split('/')[-1]+"_filtered_variants.vcf"
     params:  
         gatk = gatk,
         ref=hg,
@@ -461,10 +472,10 @@ rule Annotation_convert:
     This step converts to annovar format the vcf files.
     """
     input:
-        vcf_filt = resultdir+"{sample}_filtered_variants.vcf",
+        vcf_filt = resultdir+"{sample}".split('/')[-1]+"_filtered_variants.vcf",
         annovar_dbs = annovar_dbs,
     output:
-        outfile = resultdir+"{sample}_filtered_variants.annovar"
+        outfile = resultdir+"{sample}".split('/')[-1]+"_filtered_variants.annovar"
     params:  
         convert2annovar = convert2annovar,
         fmt = 'vcf4',
@@ -480,9 +491,9 @@ rule annovar_filter_dbSNP138:
     This step annotate variants based on dbSNP138.
     """
     input:
-        outfile = resultdir+"{sample}_filtered_variants.annovar",
+        outfile = resultdir+"{sample}".split('/')[-1]+"_filtered_variants.annovar",
     output:
-        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
+        dbsnp_rmdup = resultdir+"{sample}".split('/')[-1]+"_rmdup.dbsnp",
     params:  
         annovar = annovar,
         humandb = humandb,
@@ -502,9 +513,9 @@ rule annovar_filter_1000g:
     This step annotate variants based on 1000g database.
     """
     input:
-        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
+        dbsnp_rmdup = resultdir+"{sample}".split('/')[-1]+"_rmdup.dbsnp",
     output:
-        kg_rmdup = resultdir+"{sample}_rmdup.1000g",
+        kg_rmdup = resultdir+"{sample}".split('/')[-1]+"_rmdup.1000g",
     params:
         annovar = annovar,
         humandb = humandb,
@@ -513,7 +524,7 @@ rule annovar_filter_1000g:
         kg_ver = kg_ver,
         mutect = False,
         pars ='-maf 0.05 -reverse',
-        outfile = resultdir+"{sample}_filtered_variants.annovar",
+        outfile = resultdir+"{sample}".split('/')[-1]+"_filtered_variants.annovar",
     benchmark:
         "benchmarks/benchmark_annovarfilter1000g_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
@@ -522,22 +533,22 @@ rule annovar_filter_1000g:
         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
         shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$19,$20}}\'"+" {kg_ann}".format(kg_ann=kg_ann)+" > {output.kg_rmdup}")
 
-rule Annotation:
+rule Gene_annotation:
     """
     Gene-based annotation.
     """
     input:
-        kg_rmdup = resultdir+"{sample}_rmdup.1000g",
+        kg_rmdup = resultdir+"{sample}".split('/')[-1]+"_rmdup.1000g",
     output: 
-        known_file = resultdir+"{sample}_rmdup.known",
-        novel_file = resultdir+"{sample}_rmdup.novel",
+        known_file = resultdir+"{sample}".split('/')[-1]+"_rmdup.known",
+        novel_file = resultdir+"{sample}".split('/')[-1]+"_rmdup.novel",
     params:
         annovar = annovar,
         humandb = humandb,
         build_ver = build_ver,
-        dbsnp_rmdup = resultdir+"{sample}_rmdup.dbsnp",
+        dbsnp_rmdup = resultdir+"{sample}".split('/')[-1]+"_rmdup.dbsnp",
     benchmark:
-        "benchmarks/benchmark_Annotation_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+        "benchmarks/benchmark_Geneann_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
         kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
@@ -549,19 +560,19 @@ rule Ann_mitochondrial:
     Mitochondrial Annotation.
     """
     input:
-        known_file = resultdir+"{sample}_rmdup.known",
-        novel_file = resultdir+"{sample}_rmdup.novel",
+        known_file = resultdir+"{sample}".split('/')[-1]+"_rmdup.known",
+        novel_file = resultdir+"{sample}".split('/')[-1]+"_rmdup.novel",
     output:
-        k_f = resultdir+"{sample}_rmdup.known.exonic_variant_function", 
-        n_f = resultdir+"{sample}_rmdup.novel.exonic_variant_function",
-        mit_rmdup = resultdir+"{sample}.mit",
+        k_f = resultdir+"{sample}".split('/')[-1]+"_rmdup.known.exonic_variant_function", 
+        n_f = resultdir+"{sample}".split('/')[-1]+"_rmdup.novel.exonic_variant_function",
+        mit_rmdup = resultdir+"{sample}".split('/')[-1]+".mit",
     params:  
         annovar = annovar,
         humandb = humandb,
         build_ver = build_ver,
         mutect = False,
         mitochondrial_ver = mitochondrial_ver,
-        outfile = resultdir+"{sample}_filtered_variants.annovar",
+        outfile = resultdir+"{sample}".split('/')[-1]+"_filtered_variants.annovar",
     benchmark:
         "benchmarks/benchmark_Annmitochondrial_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
@@ -575,18 +586,20 @@ rule MakeFinalFile:
     This step makes the final file.
     """
     input:
-        k_f = resultdir+"{sample}_rmdup.known.exonic_variant_function", 
-        n_f = resultdir+"{sample}_rmdup.novel.exonic_variant_function",
-        mit_rmdup = resultdir+"{sample}.mit",
+        k_f = resultdir+"{sample}".split('/')[-1]+"_rmdup.known.exonic_variant_function", 
+        n_f = resultdir+"{sample}".split('/')[-1]+"_rmdup.novel.exonic_variant_function",
+        mit_rmdup = resultdir+"{sample}".split('/')[-1]+".mit",
     output:
-        out = resultdir+"{sample}.tsv",
+        out = resultdir+"{sample}".split('/')[-1]+".tsv",
     params:
         scripts = scripts,
         mutect = False,
         sample_order = ['n','t'],
         dbsnp_freq = True,
         dbsnpFreq = None,
-        dbsnpAllele = None,    
+        dbsnpAllele = None,
+        code = None, # Not necessary except for muTect
+        vcf = None,  # Not necessary except for muTect  
     benchmark:
         "benchmarks/benchmark_MakeFinalFile_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     script:
@@ -607,15 +620,209 @@ rule MakeFinalFile:
 #        normal = ,
 #        tumor = ,
 #    output:
-#        vcf = resultdir+"{sample}_mutect.vcf",
-#        coverage_out = resultdir+"{sample}_coverage.wig",
+#        vcf = resultdir+"{sample}".split('/')[-1]+"_mutect.vcf",
+#        coverage_out = resultdir+"{sample}".split('/')[-1]+"_coverage.wig",
 #    benchmark:
 #        "benchmarks/benchmark_muTect_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
 #    shell:
 #        "{input.muTect} --analysis_type MuTect --reference_sequence {params.ref} --cosmic {input.cosmic} --intervals {input.target} --input_file:normal {input.normal} --input_file:tumor {input.tumor} --vcf {output.vcf} --coverage_file {output.coverage_out}"
-
-
+#
+#rule Annotation_convert_mutect:
+#    """
+#    This step converts to annovar format the vcf files.
+#    """
+#    input:
+#        vcf = resultdir+"{sample}".split('/')[-1]+"_mutect.vcf",
+#        annovar_dbs = annovar_dbs,
+#    output:
+#        outfile = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+".annovar"
+#    params:  
+#        convert2annovar = convert2annovar,
+#        fmt = 'vcf4old',
+#        pars = '--filter pass',
+#    benchmark:
+#        "benchmarks/benchmark_AnnotationconvertM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    shell:
+#        "{params.convert2annovar} -format {params.fmt} {input.vcf} -outfile {output.outfile} -includeinfo '-withzyg' -comment {params.pars}"
+#
+#    
+#rule annovar_filter_dbSNP138_mutect:
+#    """
+#    This step annotate variants based on dbSNP138.
+#    """
+#    input:
+#        outfile = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+".annovar",
+#    output:
+#        dbsnp_rmdup = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.dbsnp",
+#    params:  
+#        annovar = annovar,
+#        humandb = humandb,
+#        build_ver = build_ver,
+#        dbsnp_ver = dbsnp_ver,
+#        mutect = True,
+#        pars = ''
+#    benchmark:
+#        "benchmarks/benchmark_annovarfilterdbSNP138M_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    shell:
+#        "{params.annovar} -filter {input.outfile} -buildver {params.build_ver} -dbtype {params.dbsnp_ver} {params.humandb} {params.pars} && "
+#        "awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.dbsnp_ver}',$2,$17,$18,$19}}\' {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_dropped > {output.dbsnp_rmdup}"
+#
+#
+#rule annovar_filter_1000g_mutect:
+#    """
+#    This step annotate variants based on 1000g database.
+#    """
+#    input:
+#        dbsnp_rmdup = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.dbsnp",
+#    output:
+#        kg_rmdup = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.1000g",
+#    params:
+#        annovar = annovar,
+#        humandb = humandb,
+#        build_ver = build_ver,
+#        dbsnp_ver = dbsnp_ver,
+#        kg_ver = kg_ver,
+#        mutect = True,
+#        pars ='-maf 0.05 -reverse',
+#        outfile = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+".annovar",
+#    benchmark:
+#        "benchmarks/benchmark_annovarfilter1000gM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    run:
+#        shell("{params.annovar} -filter {params.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}")
+#        suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+#        kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+#        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$17,$18,$19}}\'"+" {kg_ann}".format(kg_ann=kg_ann)+" > {output.kg_rmdup}")
+#
+#rule Gene_annotation_mutect:
+#    """
+#    Gene-based annotation.
+#    """
+#    input:
+#        kg_rmdup = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.1000g",
+#    output: 
+#        known_file = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.known",
+#        novel_file = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.novel",
+#    params:
+#        annovar = annovar,
+#        humandb = humandb,
+#        build_ver = build_ver,
+#        dbsnp_rmdup = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.dbsnp",
+#    benchmark:
+#        "benchmarks/benchmark_GeneannM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    run:
+#        suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+#        kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+#        shell("cat {params.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
+#        shell("mv "+"{kg_ann}".format(kg_ann=kg_ann)+" {output.novel_file}")
+#
+#rule Ann_mitochondrial_mutect:
+#    """
+#    Mitochondrial Annotation.
+#    """
+#    input:
+#        known_file = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.known",
+#        novel_file = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.novel",
+#    output:
+#        k_f = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.known.exonic_variant_function", 
+#        n_f = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.novel.exonic_variant_function",
+#        mit_rmdup = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+".mit",
+#    params:  
+#        annovar = annovar,
+#        humandb = humandb,
+#        build_ver = build_ver,
+#        mutect = True,
+#        mitochondrial_ver = mitochondrial_ver,
+#        outfile = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+".annovar",
+#    benchmark:
+#        "benchmarks/benchmark_AnnmitochondrialM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    run:
+#        for ann_file in [{input.known_file}, {input.novel_file}]:
+#            shell("{params.annovar} -geneanno "+"{ann_file}"+" -buildver {params.build_ver} {params.humandb}")
+#        shell("{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {params.outfile} {humandb}")
+#        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$19,$20,$21}}\' {params.outfile}.exonic_variant_function > {output.mit_rmdup}")
+#
+#
+#rule MakeFinalFile_mutect:
+#    """
+#    This step makes the final file.
+#    """
+#    input:
+#        k_f = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.known.exonic_variant_function", 
+#        n_f = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+"_rmdup.novel.exonic_variant_function",
+#        mit_rmdup = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+".mit",
+#    output:
+#        out = resultdir+ '/mutec_ann/' + "{sample}".split('/')[-1]+".tsv",
+#    params:
+#        scripts = scripts,
+#        mutect = True,
+#        sample_order = ['n','t'], # sample_order can change for muTect
+#        dbsnp_freq = True,
+#        dbsnpFreq = None,
+#        dbsnpAllele = None, 
+#        code = code,
+#        vcf = resultdir+"{sample}".split('/')[-1]+"_mutect.vcf",   
+#    benchmark:
+#        "benchmarks/benchmark_MakeFinalFileM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    script:
+#        "{params.scripts}" + "MakeFinalFile.py"
    
+###########################
+#        run_lodn         #
+###########################
+
+#rule lodn_table:
+#    """
+#    This step applies the LODn classifier on table.
+#    """
+#    input:
+#        infile = ,
+#        normal = ,
+#    output:
+#        outfile = ,
+#    params:
+#        fmt = 'table',
+#        min_n_cov = ,
+#        min_t_cov = ,   
+#    benchmark:
+#        "benchmarks/benchmark_LODntable_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    script:
+#        "{params.scripts}" + "LODn_table.py"
+#
+#rule lodn_vcf:
+#    """
+#    This step applies the LODn classifier on vcf.
+#    """
+#    input:
+#        infile = ,
+#        normal = ,
+#    output:
+#        outfile = ,
+#    params:
+#        fmt = 'vcf',
+#        min_n_cov = ,
+#        min_t_cov = ,   
+#    benchmark:
+#        "benchmarks/benchmark_LODnvcf_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    script:
+#        "{params.scripts}" + "LODn_vcf.py"
+#
+#rule LODn:
+#    """
+#    This step applies the LODn classifier.
+#    """
+#    input:
+#        infile = ,
+#        normal = ,
+#    output:
+#        outfile = ,
+#    params:
+#        fmt = config['fmt'],
+#        min_n_cov = ,
+#        min_t_cov = ,   
+#    benchmark:
+#        "benchmarks/benchmark_LODn_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+#    script:
+#        "{params.scripts}" + "LODn.py"
         
 ###############################################################################
 #                           SINGLE-TIME-RUN RULES                             #
