@@ -10,6 +10,7 @@ pip install -U snakemake
 pip install -U PyYAML
 pip install matplotlib
 pip install pandas
+pip pysam
 pip install ipython
 conda config --add channels bioconda
 mkdir ~/data_ref
