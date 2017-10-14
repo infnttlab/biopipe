@@ -685,6 +685,8 @@ rule muTect:
     params:
         dbsnp = dbsnp,
         ref = hg,
+    conda:
+        "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_muTect_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
