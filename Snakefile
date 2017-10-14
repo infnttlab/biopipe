@@ -843,7 +843,9 @@ rule lodn_table:
         fmt = 'table',
         scripts = scripts,
         min_n_cov = min_n_cov,
-        min_t_cov = min_t_cov,   
+        min_t_cov = min_t_cov,
+    conda:
+        "envs/config_conda.yaml"   
     benchmark:
         "benchmarks/benchmark_LODntable_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     script:
@@ -863,6 +865,8 @@ rule lodn_vcf:
         scripts = scripts,
         min_n_cov = min_n_cov,
         min_t_cov = min_t_cov,   
+    conda:
+        "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_LODnvcf_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     script:
