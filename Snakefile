@@ -841,6 +841,7 @@ rule lodn_table:
         outfile = resultdir+"{sick}"+"_lodn_table.tsv",
     params:
         fmt = 'table',
+        scripts = scripts,
         min_n_cov = min_n_cov,
         min_t_cov = min_t_cov,   
     benchmark:
@@ -859,6 +860,7 @@ rule lodn_vcf:
         outfile = resultdir+"{sick}"+"_lodn_vcf.tsv",
     params:
         fmt = 'vcf',
+        scripts = scripts,
         min_n_cov = min_n_cov,
         min_t_cov = min_t_cov,   
     benchmark:
@@ -960,7 +962,7 @@ rule gunzip_dbsnp:
 rule download_cosmic:
     """download  cosmic from broadinstitute"""
     output:
-        cosmic,
+        cosmic=cosmic,
     shell:
         "wget http://www.broadinstitute.org/cancer/cga/sites/default/files/data/tools/mutect/b37_cosmic_v54_120711.vcf && "
         "mv b37_cosmic_v54_120711.vcf {output.cosmic}"
@@ -968,7 +970,7 @@ rule download_cosmic:
 rule download_target:
     """download target from illumina"""
     output:
-        target,
+        target = target,
     shell:
         "wget https://support.illumina.com/content/dam/illumina-support/documents/documentation/chemistry_documentation/samplepreps_nextera/nexterarapidcapture/nexterarapidcapture_expandedexome_targetedregions.bed && "
         "mv nexterarapidcapture_expandedexome_targetedregions.bed {output.target}"
