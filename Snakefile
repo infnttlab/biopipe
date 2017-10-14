@@ -35,6 +35,8 @@ mitochondrial_ver = config['ref-files']['mitochondrial_ver'] # Set parameter com
 # Folders
 scripts = config['folders']['scripts']
 datadir = config['folders']['datadir']
+normal_dir = config['folders']['datadir_normal']
+tumour_dir = config['folders']['datadir_tumour']
 resultdir = config['folders']['resultdir']
 
 # Softwares
@@ -60,36 +62,78 @@ filter_exp_indels = config['hard-filter']['indels'] # Set command to define thre
 # Annovar databases
 annovar_dbs = [home + config['annovar_dbs']['hg19_db'] , home + config['annovar_dbs']['snp138_db']]
 
+#LODn parameters
+min_n_cov = config['LODn']['min_n_cov'] #Set the minimum read depth for normal and tumor samples
+min_t_cov = config['LODn']['min_t_cov']
+
 #######################
 #   Get fastq files   #
 #######################
 
-list_of_dirs = [config['folders']['datadir'], home + config['folders']['datadir_normal'], home + config['folders']['datadir_tumour']]
-samples = [filename for Dir in list_of_dirs for filename in os.listdir(Dir) if filename.endswith('.fastq')]
-samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
+patients = [folder for folder in os.listdir(datadir)]
+p_folders = [normal_dir, tumour_dir]
+SAMPLES = [filename for Dir in os.listdir(datadir) for sub_dir in p_folders if os.path.isdir(datadir+Dir+sub_dir) for filename in os.listdir(datadir+Dir+sub_dir) if filename.endswith('.fastq')]
+SAMPLES = set("_".join(filename.split('_')[:-1]) for filename in SAMPLES)
+sicks = [folder for folder in os.listdir(datadir) if (os.path.isdir(datadir+folder+normal_dir)) and (os.path.isdir(datadir+folder+tumour_dir))] 
+
+wildcard_constraints:
+    sample = [name for name in SAMPLES],
+    #sick = [s for s in sicks],
+
 samples_directory = {}
-for Dir in (list_of_dirs):
-    for filename in os.listdir(Dir):
-       if filename.endswith('.fastq'):
-           filename = "_".join(filename.split('_')[:-1])
-           samples_directory[filename] = Dir
+sample_to_patient = {}
+for patient in patients:
+    for sub_dir in p_folders:
+        if os.path.isdir(datadir+patient+sub_dir):
+            for filename in os.listdir(datadir+patient+sub_dir):
+               if filename.endswith('.fastq'):
+                   filename = "_".join(filename.split('_')[:-1])
+                   samples_directory[filename] = datadir+patient+sub_dir
+                   sample_to_patient[filename] = patient 
+
 def set_dir1(wildcards):
-    if wildcards in samples:
-        return (samples_directory[wildcards]+wildcards+'_1.fastq')
-    else:
-        return wildcards
+    #if wildcards in SAMPLES:
+    return (samples_directory[wildcards]+wildcards+'_1.fastq')
+    #else:
+     #   return wildcards
     
 def set_dir2(wildcards):
-    if wildcards in samples:
-        return (samples_directory[wildcards]+wildcards+'_2.fastq')
+    #if wildcards in SAMPLES:
+    return (samples_directory[wildcards]+wildcards+'_2.fastq')
+    #else:
+     #   return wildcards
+
+
+
+sicks_list = {}
+for sick in sicks:
+    sicks_list[sick] = {}
+    for sub_dir in p_folders:
+        name = [filename for filename in os.listdir(datadir+sick+sub_dir) if filename.endswith('.fastq')][0]       
+        name = "_".join(name.split('_')[:-1])
+        sicks_list[sick][sub_dir] = name
+   
+
+def get_bam(wildcards, sample_type='N'):
+    if wildcards in sicks:    
+        if sample_type=='N': 
+            return (resultdir+sicks_list[wildcards][normal_dir]+"_recal.bam")
+        elif sample_type=='T':   
+            return (resultdir+sicks_list[wildcards][tumour_dir]+"_recal.bam")    
     else:
         return wildcards
-    
-
-#samples = [filename for filename in os.listdir('./'+datadir) if filename.endswith('.fastq')]
-#samples = set("_".join(filename.split('_')[:-1]) for filename in samples)
-
-
+        
+def get_code(wildcards):
+    if wildcards in sicks:
+        return (sicks_list[wildcards][normal_dir])
+    else:
+        return wildcards
+        
+def get_lodn_infile(wildcards,format):
+    if format == 'table':
+        return (resultdir+sicks_list[wildcards][normal_dir]+".tsv")
+    elif format == 'vcf':
+        return (resultdir+sicks_list[wildcards][normal_dir]+"_filtered_variants.vcf")
 
 #######################
 # Workflow final rule #
@@ -97,8 +141,10 @@ def set_dir2(wildcards):
 
 rule all:
     input:
-        #expand(resultdir+"{sample}_recal.bai", sample=samples),
-        expand(resultdir+"{sample}.tsv", sample=samples),
+        expand(resultdir+"{sample}.tsv", sample=SAMPLES),
+        expand(resultdir+ 'mutect_ann/' + "{sick}"+".tsv", sick=sicks),
+        expand(resultdir+"{sick}"+"_lodn_vcf.tsv",sick=sicks),
+        expand(resultdir+"{sick}"+"_lodn_table.tsv",sick=sicks),
     benchmark:
         "benchmarks/benchmark_rule_all_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
@@ -253,7 +299,7 @@ rule BQSR_step_1:
         r_idx=resultdir+"{sample}"+"_realigned.bai",
         dbsnp = dbsnp,
     output:
-        resultdir+"{sample}"+"_recal_data.table"
+        outtable1 = resultdir+"{sample}"+"_recal_data.table"
     params:  
         gatk = gatk,
         ref=hg,
@@ -264,7 +310,7 @@ rule BQSR_step_1:
         "benchmarks/benchmark_BQSR1_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output}"
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output.outtable1}"
 
 rule BQSR_step_2:
     """
@@ -272,9 +318,9 @@ rule BQSR_step_2:
     This step produces a post recalibrated data table.
     """
     input:
-        outtable1=resultdir+"{sample}"+"_recal_data.table",
+        outtable1 = resultdir+"{sample}"+"_recal_data.table",
     output:
-        resultdir+"{sample}"+"_post_recal_data.table"
+        outtable2 = resultdir+"{sample}"+"_post_recal_data.table"
     params:  
         gatk = gatk,
         ref=hg,
@@ -287,7 +333,7 @@ rule BQSR_step_2:
         "benchmarks/benchmark_BQSR2_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     threads: 32
     shell:
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {params.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output}"
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {params.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output.outtable2}"
 
 rule BQSR_step_3:
     """
@@ -336,8 +382,8 @@ rule BQSR_step_4:
 #        r_idx=resultdir+"{sample}"+"_realigned.bai",
 #        dbsnp = dbsnp,
 #    output:
-#        outtable1 = resultdir+"{sample}"+"_recal_data.table",
-#        outtable2 = resultdir+"{sample}"+"_post_recal_data.table",
+#        outtable1 = resultdir+"{sample}"+".recal_data.table",
+#        outtable2 = resultdir+"{sample}"+".post_recal_data.table",
 #        plots = resultdir+"{sample}"+"_recalibrationPlots.pdf",
 #        recal_bam = resultdir+"{sample}"+"_recal.bam",
 #        recal_bai = resultdir+"{sample}"+"_recal.bai",
@@ -409,7 +455,7 @@ rule HardFilter_2SNPs:
     input:
         raw_snps = resultdir+"{sample}"+"_snps.vcf"
     output:
-        filt_snps = resultdir+"{sample}"+"_hard_filtered_snps.vcf"
+        filt_snps = resultdir+"{sample}"+"_hard_filtered.snps.vcf"
     params:  
         gatk = gatk,
         ref=hg,
@@ -449,7 +495,7 @@ rule HardFilter_2Indels:
     input:
         raw_indels = resultdir+"{sample}"+"_indels.vcf",
     output:
-        filt_indels = resultdir+"{sample}"+"_hard_filtered_indels.vcf"
+        filt_indels = resultdir+"{sample}"+"_hard_filtered.indels.vcf"
     params:  
         gatk = gatk,
         ref=hg,
@@ -467,8 +513,8 @@ rule HardFilter_Combine:
     This tool combines variants.
     """
     input:
-        filt_snps = resultdir+"{sample}"+"_hard_filtered_snps.vcf",
-        filt_indels = resultdir+"{sample}"+"_hard_filtered_indels.vcf",
+        filt_snps = resultdir+"{sample}"+"_hard_filtered.snps.vcf",
+        filt_indels = resultdir+"{sample}"+"_hard_filtered.indels.vcf",
     output:
         vcf_filt = resultdir+"{sample}"+"_filtered_variants.vcf"
     params:  
@@ -624,202 +670,202 @@ rule MakeFinalFile:
 #        mutect_pipe         #
 ##############################
 
-#rule muTect:
-#    input:
-#        muTect,
-#        ref = hg,
-#        dbsnp,
-#        cosmic,
-#        target,
-#        normal = ,
-#        tumor = ,
-#    output:
-#        vcf = resultdir+"{sample}"+"_mutect.vcf",
-#        coverage_out = resultdir+"{sample}"+"_coverage.wig",
-#    benchmark:
-#        "benchmarks/benchmark_muTect_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    shell:
-#        "{input.muTect} --analysis_type MuTect --reference_sequence {params.ref} --cosmic {input.cosmic} --intervals {input.target} --input_file:normal {input.normal} --input_file:tumor {input.tumor} --vcf {output.vcf} --coverage_file {output.coverage_out}"
-#
-#rule Annotation_convert_mutect:
-#    """
-#    This step converts to annovar format the vcf files.
-#    """
-#    input:
-#        vcf = resultdir+"{sample}"+"_mutect.vcf",
-#        annovar_dbs = annovar_dbs,
-#    output:
-#        outfile = resultdir+ '/mutec_ann/' + "{sample}"+".annovar"
-#    params:  
-#        convert2annovar = convert2annovar,
-#        fmt = 'vcf4old',
-#        pars = '--filter pass',
-#    benchmark:
-#        "benchmarks/benchmark_AnnotationconvertM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    shell:
-#        "{params.convert2annovar} -format {params.fmt} {input.vcf} -outfile {output.outfile} -includeinfo '-withzyg' -comment {params.pars}"
-#
-#    
-#rule annovar_filter_dbSNP138_mutect:
-#    """
-#    This step annotate variants based on dbSNP138.
-#    """
-#    input:
-#        outfile = resultdir+ '/mutec_ann/' + "{sample}"+".annovar",
-#    output:
-#        dbsnp_rmdup = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.dbsnp",
-#    params:  
-#        annovar = annovar,
-#        humandb = humandb,
-#        build_ver = build_ver,
-#        dbsnp_ver = dbsnp_ver,
-#        mutect = True,
-#        pars = ''
-#    benchmark:
-#        "benchmarks/benchmark_annovarfilterdbSNP138M_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    shell:
-#        "{params.annovar} -filter {input.outfile} -buildver {params.build_ver} -dbtype {params.dbsnp_ver} {params.humandb} {params.pars} && "
-#        "awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.dbsnp_ver}',$2,$17,$18,$19}}\' {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_dropped > {output.dbsnp_rmdup}"
-#
-#
-#rule annovar_filter_1000g_mutect:
-#    """
-#    This step annotate variants based on 1000g database.
-#    """
-#    input:
-#        dbsnp_rmdup = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.dbsnp",
-#    output:
-#        kg_rmdup = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.1000g",
-#    params:
-#        annovar = annovar,
-#        humandb = humandb,
-#        build_ver = build_ver,
-#        dbsnp_ver = dbsnp_ver,
-#        kg_ver = kg_ver,
-#        mutect = True,
-#        pars ='-maf 0.05 -reverse',
-#        outfile = resultdir+ '/mutec_ann/' + "{sample}"+".annovar",
-#    benchmark:
-#        "benchmarks/benchmark_annovarfilter1000gM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    run:
-#        shell("{params.annovar} -filter {params.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}")
-#        suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
-#        kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
-#        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$17,$18,$19}}\'"+" {kg_ann}".format(kg_ann=kg_ann)+" > {output.kg_rmdup}")
-#
-#rule Gene_annotation_mutect:
-#    """
-#    Gene-based annotation.
-#    """
-#    input:
-#        kg_rmdup = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.1000g",
-#    output: 
-#        known_file = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.known",
-#        novel_file = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.novel",
-#    params:
-#        annovar = annovar,
-#        humandb = humandb,
-#        build_ver = build_ver,
-#        dbsnp_rmdup = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.dbsnp",
-#    benchmark:
-#        "benchmarks/benchmark_GeneannM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    run:
-#        suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
-#        kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
-#        shell("cat {params.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
-#        shell("mv "+"{kg_ann}".format(kg_ann=kg_ann)+" {output.novel_file}")
-#
-#rule Ann_mitochondrial_mutect:
-#    """
-#    Mitochondrial Annotation.
-#    """
-#    input:
-#        known_file = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.known",
-#        novel_file = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.novel",
-#    output:
-#        k_f = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.known.exonic_variant_function", 
-#        n_f = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.novel.exonic_variant_function",
-#        mit_rmdup = resultdir+ '/mutec_ann/' + "{sample}"+".mit",
-#    params:  
-#        annovar = annovar,
-#        humandb = humandb,
-#        build_ver = build_ver,
-#        mutect = True,
-#        mitochondrial_ver = mitochondrial_ver,
-#        outfile = resultdir+ '/mutec_ann/' + "{sample}"+".annovar",
-#    benchmark:
-#        "benchmarks/benchmark_AnnmitochondrialM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    run:
-#        for ann_file in [{input.known_file}, {input.novel_file}]:
-#            shell("{params.annovar} -geneanno "+"{ann_file}"+" -buildver {params.build_ver} {params.humandb}")
-#        shell("{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {params.outfile} {humandb}")
-#        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$19,$20,$21}}\' {params.outfile}.exonic_variant_function > {output.mit_rmdup}")
-#
-#
-#rule MakeFinalFile_mutect:
-#    """
-#    This step makes the final file.
-#    """
-#    input:
-#        k_f = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.known.exonic_variant_function", 
-#        n_f = resultdir+ '/mutec_ann/' + "{sample}"+"_rmdup.novel.exonic_variant_function",
-#        mit_rmdup = resultdir+ '/mutec_ann/' + "{sample}"+".mit",
-#    output:
-#        out = resultdir+ '/mutec_ann/' + "{sample}"+".tsv",
-#    params:
-#        scripts = scripts,
-#        mutect = True,
-#        sample_order = ['n','t'], # sample_order can change for muTect
-#        dbsnp_freq = True,
-#        dbsnpFreq = None,
-#        dbsnpAllele = None, 
-#        code = code,
-#        vcf = resultdir+"{sample}"+"_mutect.vcf",   
-#    benchmark:
-#        "benchmarks/benchmark_MakeFinalFileM_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    script:
-#        "{params.scripts}" + "MakeFinalFile.py"
+
+
+rule muTect:
+    input:
+        muTect,
+        cosmic,
+        target,
+        normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
+        tumour_bam = lambda wildcards: get_bam(wildcards.sick,'T'),
+    output:
+        vcf = resultdir+"{sick}"+"_mutect.vcf",
+        coverage_out = resultdir+"{sick}"+"_coverage.wig",
+    params:
+        dbsnp = dbsnp,
+        ref = hg,
+    benchmark:
+        "benchmarks/benchmark_muTect_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "java -Xmx50g -jar {input.muTect} --analysis_type MuTect --reference_sequence {params.ref} --cosmic {input.cosmic} --intervals {input.target} --input_file:normal {input.normal} --input_file:tumor {input.tumor} --vcf {output.vcf} --coverage_file {output.coverage_out}"#
+
+rule Annotation_convert_mutect:
+    """
+    This step converts to annovar format the vcf files.
+    """
+    input:
+        vcf = resultdir+"{sick}"+"_mutect.vcf",
+        annovar_dbs = annovar_dbs,
+    output:
+        outfile = resultdir+ 'mutect_ann/' + "{sick}"+".annovar"
+    params:  
+        convert2annovar = convert2annovar,
+        fmt = 'vcf4old',
+        pars = '--filter pass',
+    benchmark:
+        "benchmarks/benchmark_AnnotationconvertM_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "{params.convert2annovar} -format {params.fmt} {input.vcf} -outfile {output.outfile} -includeinfo '-withzyg' -comment {params.pars}"
+    
+rule annovar_filter_dbSNP138_mutect:
+    """
+    This step annotate variants based on dbSNP138.
+    """
+    input:
+        outfile = resultdir+ 'mutect_ann/' + "{sick}"+".annovar",
+    output:
+        dbsnp_rmdup = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.dbsnp",
+    params:  
+        annovar = annovar,
+        humandb = humandb,
+        build_ver = build_ver,
+        dbsnp_ver = dbsnp_ver,
+        mutect = True,
+        pars = ''
+    benchmark:
+        "benchmarks/benchmark_annovarfilterdbSNP138M_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    shell:
+        "{params.annovar} -filter {input.outfile} -buildver {params.build_ver} -dbtype {params.dbsnp_ver} {params.humandb} {params.pars} && "
+        "awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.dbsnp_ver}',$2,$17,$18,$19}}\' {input.outfile}.{params.build_ver}_{params.dbsnp_ver}_dropped > {output.dbsnp_rmdup}"
+
+rule annovar_filter_1000g_mutect:
+    """
+    This step annotate variants based on 1000g database.
+    """
+    input:
+        dbsnp_rmdup = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.dbsnp",
+    output:
+        kg_rmdup = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.1000g",
+    params:
+        annovar = annovar,
+        humandb = humandb,
+        build_ver = build_ver,
+        dbsnp_ver = dbsnp_ver,
+        kg_ver = kg_ver,
+        mutect = True,
+        pars ='-maf 0.05 -reverse',
+        outfile = resultdir+ 'mutect_ann/' + "{sick}"+".annovar",
+    benchmark:
+        "benchmarks/benchmark_annovarfilter1000gM_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    run:
+        shell("{params.annovar} -filter {params.outfile}.{params.build_ver}_{params.dbsnp_ver}_filtered -buildver {params.build_ver} -dbtype {params.kg_ver} {params.humandb} {params.pars}")
+        suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+        kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.kg_ver}',$2,$17,$18,$19}}\'"+" {kg_ann}".format(kg_ann=kg_ann)+" > {output.kg_rmdup}")
+
+rule Gene_annotation_mutect:
+    """
+    Gene-based annotation.
+    """
+    input:
+        kg_rmdup = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.1000g",
+    output: 
+        known_file = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.known",
+        novel_file = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.novel",
+    params:
+        annovar = annovar,
+        humandb = humandb,
+        build_ver = build_ver,
+        dbsnp_rmdup = resultdir+ 'mutec_ann/' + "{sick}"+"_rmdup.dbsnp",
+    benchmark:
+        "benchmarks/benchmark_GeneannM_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    run:
+        suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
+        kg_ann = resultdir + [x for x in os.listdir(resultdir) if re.findall(suffix,x)][0]
+        shell("cat {params.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
+        shell("mv "+"{kg_ann}".format(kg_ann=kg_ann)+" {output.novel_file}")
+
+rule Ann_mitochondrial_mutect:
+    """
+    Mitochondrial Annotation.
+    """
+    input:
+        known_file = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.known",
+        novel_file = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.novel",
+    output:
+        k_f = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.known.exonic_variant_function", 
+        n_f = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.novel.exonic_variant_function",
+        mit_rmdup = resultdir+ 'mutect_ann/' + "{sick}"+".mit",
+    params:  
+        annovar = annovar,
+        humandb = humandb,
+        build_ver = build_ver,
+        mutect = True,
+        mitochondrial_ver = mitochondrial_ver,
+        outfile = resultdir+ 'mutect_ann/' + "{sick}"+".annovar",
+    benchmark:
+        "benchmarks/benchmark_AnnmitochondrialM_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    run:
+        for ann_file in [{input.known_file}, {input.novel_file}]:
+            shell("{params.annovar} -geneanno "+"{ann_file}"+" -buildver {params.build_ver} {params.humandb}")
+        shell("{params.annovar} -buildver {params.mitochondrial_ver} -dbtype ensGene {params.outfile} {humandb}")
+        shell("awk \'{{print $3,$4,$5,$6,$7,$8,$9,'{params.mitochondrial_ver}',$2,$19,$20,$21}}\' {params.outfile}.exonic_variant_function > {output.mit_rmdup}")
+
+rule MakeFinalFile_mutect:
+    """
+    This step makes the final file.
+    """
+    input:
+        k_f = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.known.exonic_variant_function", 
+        n_f = resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.novel.exonic_variant_function",
+        mit_rmdup = resultdir+ 'mutect_ann/' + "{sick}"+".mit",
+    output:
+        out = resultdir+ 'mutect_ann/' + "{sick}"+".tsv",
+    params:
+        scripts = scripts,
+        mutect = True,
+        sample_order = ['n','t'], # sample_order can change for muTect
+        dbsnp_freq = True,
+        dbsnpFreq = None,
+        dbsnpAllele = None, 
+        code = lambda wildcards: get_code(wildcards.sick),
+        vcf = resultdir+"{sick}"+"_mutect.vcf",   
+    benchmark:
+        "benchmarks/benchmark_MakeFinalFileM_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    script:
+        "{params.scripts}" + "MakeFinalFile.py"
    
 ###########################
 #        run_lodn         #
 ###########################
 
-#rule lodn_table:
-#    """
-#    This step applies the LODn classifier on table.
-#    """
-#    input:
-#        infile = ,
-#        normal = ,
-#    output:
-#        outfile = ,
-#    params:
-#        fmt = 'table',
-#        min_n_cov = ,
-#        min_t_cov = ,   
-#    benchmark:
-#        "benchmarks/benchmark_LODntable_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    script:
-#        "{params.scripts}" + "LODn_table.py"
-#
-#rule lodn_vcf:
-#    """
-#    This step applies the LODn classifier on vcf.
-#    """
-#    input:
-#        infile = ,
-#        normal = ,
-#    output:
-#        outfile = ,
-#    params:
-#        fmt = 'vcf',
-#        min_n_cov = ,
-#        min_t_cov = ,   
-#    benchmark:
-#        "benchmarks/benchmark_LODnvcf_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-#    script:
-#        "{params.scripts}" + "LODn_vcf.py"
-#
+rule lodn_table:
+    """
+    This step applies the LODn classifier on table.
+    """
+    input:
+        infile = lambda wildcards: get_lodn_infile(wildcards.sick,'table'),
+        normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
+    output:
+        outfile = resultdir+"{sick}"+"_lodn_table.tsv",
+    params:
+        fmt = 'table',
+        min_n_cov = min_n_cov,
+        min_t_cov = min_t_cov,   
+    benchmark:
+        "benchmarks/benchmark_LODntable_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    script:
+        "{params.scripts}" + "LODn_table.py"
+
+rule lodn_vcf:
+    """
+    This step applies the LODn classifier on vcf.
+    """
+    input:
+        infile = lambda wildcards: get_lodn_infile(wildcards.sick,'vcf'),
+        normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
+    output:
+        outfile = resultdir+"{sick}"+"_lodn_vcf.tsv",
+    params:
+        fmt = 'vcf',
+        min_n_cov = min_n_cov,
+        min_t_cov = min_t_cov,   
+    benchmark:
+        "benchmarks/benchmark_LODnvcf_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+    script:
+        "{params.scripts}" + "LODn_vcf.py"
+
 #rule LODn:
 #    """
 #    This step applies the LODn classifier.
@@ -1004,13 +1050,13 @@ rule check_GATK:
         "echo 'Error. Genome Analysis ToolKit not found in softwares directory.' && "
         "exit 1"
 
-#rule check_muTect:
-#    output:
-#        muTect,
-#    priority: 3
-#    shell:
-#        "echo 'Error. muTect not found in softwares directory.' && "
-#        "exit 1"
+rule check_muTect:
+    output:
+        muTect,
+    priority: 3
+    shell:
+        "echo 'Error. muTect not found in softwares directory.' && "
+        "exit 1"
 
 rule check_Annovar:
     output:
