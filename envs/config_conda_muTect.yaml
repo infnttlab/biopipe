@@ -1,0 +1,6 @@
+
+channels:
+  - bioconda
+dependencies:
+ - java-jdk = 6.0.77
+ 
