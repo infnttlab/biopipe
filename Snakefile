@@ -131,9 +131,9 @@ def get_code(wildcards):
         
 def get_lodn_infile(wildcards,format):
     if format == 'table':
-        return (resultdir+sicks_list[wildcards][normal_dir]+".tsv")
+        return (resultdir+sicks_list[wildcards][tumour_dir]+".tsv")
     elif format == 'vcf':
-        return (resultdir+sicks_list[wildcards][normal_dir]+"_filtered_variants.vcf")
+        return (resultdir+sicks_list[wildcards][tumour_dir]+"_filtered_variants.vcf")
 
 #######################
 # Workflow final rule #
