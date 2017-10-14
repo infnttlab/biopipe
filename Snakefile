@@ -674,9 +674,9 @@ rule MakeFinalFile:
 
 rule muTect:
     input:
-        muTect,
-        cosmic,
-        target,
+        muTect = muTect,
+        cosmic = cosmic,
+        target = target,
         normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
         tumour_bam = lambda wildcards: get_bam(wildcards.sick,'T'),
     output:
