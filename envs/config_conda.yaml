@@ -10,7 +10,6 @@ dependencies:
  - samtools
  - pyvcf
  - java-jdk
- - openjdk
  - r-ggplot2
  - r-reshape
  - r-gplots
