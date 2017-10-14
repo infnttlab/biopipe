@@ -20,14 +20,14 @@ ref-files:
 
 folders:
     scripts: 'scripts/'
-    datadir: 'data/'
-    datadir_normal : '/data_ref/normal_sample/'
-    datadir_tumour : '/data_ref/tumour_sample/'
+    datadir: 'Data/'
+    datadir_normal : '/Normal/'
+    datadir_tumour : '/Tumour/'
     resultdir: 'results/'
 
 softwares:
     gatk: '/softwares/GenomeAnalysisTK.jar'
-    muTect: '/softwares/muTect'
+    muTect: '/softwares/muTect-1.1.4.jar'
     annovar: '/softwares/annovar/annotate_variation.pl'
     convert2annovar: '/softwares/annovar/convert2annovar.pl'
     
@@ -50,4 +50,8 @@ hard-filter:
 annovar_dbs:
     hg19_db: '/softwares/annovar/humandb/hg19_ALL.sites.2012_04.txt'
     snp138_db: '/softwares/annovar/humandb/hg19_snp138.txt'
-    
+
+LODn:
+    #Set the minimum read depth for normal and tumor samples
+    min_n_cov: 8
+    min_t_cov: 10  
