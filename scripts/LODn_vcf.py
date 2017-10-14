@@ -84,7 +84,7 @@ def lodn_calculator_vcf(tumor_vcf,normal_bam,outfile,min_n_cov = 8,
                     if lod_n >= lodn_novel:
                         vcf_writer.write_record(variant)
                         
-lodn_calculator_vcf(snakemake.input['infile'], snakemake.input['normal'], snakemake.output['outfile'],
+lodn_calculator_vcf(snakemake.input['infile'], snakemake.input['normal_bam'], snakemake.output['outfile'],
                                  snakemake.params['min_n_cov'],
                                  snakemake.params['min_t_cov'],
                                  lodn_known = 5.5, lodn_novel=2.2)
