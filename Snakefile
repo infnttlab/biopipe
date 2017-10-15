@@ -676,7 +676,7 @@ rule muTect:
     input:
         muTect = muTect,
         cosmic = cosmic,
-        target = target,
+        fixed_target = target + "_fixed.bed",
         normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
         tumour_bam = lambda wildcards: get_bam(wildcards.sick,'T'),
     output:
@@ -690,7 +690,7 @@ rule muTect:
     benchmark:
         "benchmarks/benchmark_muTect_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
-        "java -Xmx50g -jar {input.muTect} --analysis_type MuTect --reference_sequence {params.ref} --cosmic {input.cosmic} --intervals {input.target} --input_file:normal {input.normal_bam} --input_file:tumor {input.tumour_bam} --vcf {output.vcf} --coverage_file {output.coverage_out}"#
+        "java -Xmx50g -jar {input.muTect} --analysis_type MuTect --reference_sequence {params.ref} --cosmic {input.cosmic} --intervals {input.target} --input_file:normal {input.normal_bam} --input_file:tumor {input.tumour_bam} --vcf {output.vcf} --coverage_file {output.coverage_out}"
 
 rule Annotation_convert_mutect:
     """
@@ -976,11 +976,22 @@ rule download_cosmic:
 rule download_target:
     """download target from illumina"""
     output:
-        target = target,
+        target = target + ".bed",
     shell:
         "wget https://support.illumina.com/content/dam/illumina-support/documents/documentation/chemistry_documentation/samplepreps_nextera/nexterarapidcapture/nexterarapidcapture_expandedexome_targetedregions.bed && "
         "mv nexterarapidcapture_expandedexome_targetedregions.bed {output.target}"
 
+rule fix_target:
+    """fix target: remove prefix chr in first column and last column(name)"""
+    input:
+        target = target + ".bed",
+    output:
+        fixed_target = target + "_fixed.bed",
+    shell:
+        "sed 's/^chr//' {input.target} > no_chr.bed &&"
+        "awk \'{{print $1,$2,$3}}\' no_chr.bed > {output.fixed_target} &&"
+        "rm no_chr.bed"
+        
 
 rule download_annovar_databases:
     input:
