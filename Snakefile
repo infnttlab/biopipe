@@ -774,7 +774,7 @@ rule Gene_annotation_mutect:
         "benchmarks/benchmark_GeneannM_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     run:
         suffix = '.%s_%s.sites.\d\d\d\d_\d\d_filtered'%(build_ver,kg_ver[-3:].upper())
-        kg_ann = resultdir + 'mutect_ann' + [x for x in os.listdir(resultdir + 'mutect_ann') if re.findall(suffix,x)][0]
+        kg_ann = resultdir + 'mutect_ann/' + [x for x in os.listdir(resultdir + 'mutect_ann/') if re.findall(suffix,x)][0]
         shell("cat {params.dbsnp_rmdup} {input.kg_rmdup} > {output.known_file}")
         shell("mv "+"{kg_ann}".format(kg_ann=kg_ann)+" {output.novel_file}")
 
