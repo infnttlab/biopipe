@@ -34,7 +34,7 @@ softwares:
 sample-details:
     platform: 'illumina' # Set platform for mapping
     library: 'WES-Nextera-Rapid-Capture' # Set library for mapping
-    target: '/data_ref/nexterarapidcapture_expandedexome_targetedregions.bed' # Set target intervals for exome analysis
+    target: '/data_ref/nexterarapidcapture_expandedexome_targetedregions' # Set target intervals for exome analysis
 
 hap-caller:
     genotyping_mode: 'DISCOVERY' # Set genotyping mode
