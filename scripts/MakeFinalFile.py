@@ -167,7 +167,7 @@ def get_order_vcf (normal_name, infile):
 
 def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
                    sample_order=['n','t'],dbsnp_freq=True, dbsnpFreq = None,
-                   dbsnpAllele=None, code, vcf):
+                   dbsnpAllele=None, code = None, vcf = None):
     
     ## defining column names
     cols = []
