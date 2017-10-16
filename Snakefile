@@ -77,8 +77,8 @@ SAMPLES = set("_".join(filename.split('_')[:-1]) for filename in SAMPLES)
 sicks = [folder for folder in os.listdir(datadir) if (os.path.isdir(datadir+folder+normal_dir)) and (os.path.isdir(datadir+folder+tumour_dir))] 
 
 wildcard_constraints:
-    sample = [name for name in SAMPLES],
-    #sick = [s for s in sicks],
+    sample = "("+"|".join(SAMPLES)+")",
+    sick = "("+"|".join(sicks)+")",
 
 samples_directory = {}
 sample_to_patient = {}
@@ -92,17 +92,10 @@ for patient in patients:
                    sample_to_patient[filename] = patient 
 
 def set_dir1(wildcards):
-    #if wildcards in SAMPLES:
     return (samples_directory[wildcards]+wildcards+'_1.fastq')
-    #else:
-     #   return wildcards
     
 def set_dir2(wildcards):
-    #if wildcards in SAMPLES:
     return (samples_directory[wildcards]+wildcards+'_2.fastq')
-    #else:
-     #   return wildcards
-
 
 
 sicks_list = {}
@@ -114,20 +107,15 @@ for sick in sicks:
         sicks_list[sick][sub_dir] = name
    
 
-def get_bam(wildcards, sample_type='N'):
-    if wildcards in sicks:    
-        if sample_type=='N': 
-            return (resultdir+sicks_list[wildcards][normal_dir]+"_recal.bam")
-        elif sample_type=='T':   
-            return (resultdir+sicks_list[wildcards][tumour_dir]+"_recal.bam")    
-    else:
-        return wildcards
+def get_bam(wildcards, sample_type='N'):    
+    if sample_type=='N': 
+        return (resultdir+sicks_list[wildcards][normal_dir]+"_recal.bam")
+    elif sample_type=='T':   
+        return (resultdir+sicks_list[wildcards][tumour_dir]+"_recal.bam")    
+
         
 def get_code(wildcards):
-    if wildcards in sicks:
-        return (sicks_list[wildcards][normal_dir])
-    else:
-        return wildcards
+    return (sicks_list[wildcards][normal_dir])
         
 def get_lodn_infile(wildcards,format):
     if format == 'table':
@@ -141,7 +129,7 @@ def get_lodn_infile(wildcards,format):
 
 rule all:
     input:
-        expand(resultdir+"{sample}.tsv", sample=SAMPLES),
+        expand(resultdir+"{sample}"+".tsv", sample=SAMPLES),
         expand(resultdir+ 'mutect_ann/' + "{sick}"+".tsv", sick=sicks),
         expand(resultdir+"{sick}"+"_lodn_vcf.tsv",sick=sicks),
         expand(resultdir+"{sick}"+"_lodn_table.tsv",sick=sicks),
