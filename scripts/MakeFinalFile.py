@@ -1,9 +1,5 @@
 import os
-import sys
-import time
-import yaml
 import subprocess
-import re
 import pandas as pd
 from pandas import DataFrame
 from collections import defaultdict
@@ -15,7 +11,8 @@ def parse_known (fi_known, mutect=False,sample_order=['n','t']):
     tmp = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                         stderr=subprocess.PIPE,shell=True)
     (output, err) = tmp.communicate()
-    known = output.decode("utf-8").split('\n')
+    output = output.decode('utf8')
+    known = output.split('\n')
     if known[-1] == '':
         known = known[:-1]
     dic = defaultdict(dict)
@@ -58,7 +55,8 @@ def parse_novel (infile,mutect=False,sample_order=['n','t']):
     tmp = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                         stderr=subprocess.PIPE, shell=True)
     (output, err) = tmp.communicate()
-    data = output.decode("utf-8").split('\n')
+    output = output.decode('utf8')
+    data = output.split('\n')
     if data[-1] == '':
         data = data[:-1]
     dic = defaultdict(dict)
@@ -112,7 +110,8 @@ def parse_mit (fi_known,mutect=False,sample_order=['n','t']):
     tmp = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
                         stderr=subprocess.PIPE,shell=True)
     (output, err) = tmp.communicate()
-    data = output.decode("utf-8").split('\n')
+    output = output.decode('utf8')
+    data = output.split('\n')
     ## check if last line is empty
     if data[-1] == '':
         data = data[:-1]
@@ -135,7 +134,7 @@ def parse_mit (fi_known,mutect=False,sample_order=['n','t']):
                 'pos.end','ref.base','alt.base','database','type',
                 'format','info']
         for i in range(len(data)):
-            vec = data[i].split('\t')[:-1]
+            vec = data[i].split('\t')
             for k in range(len(vec)):
                 dic[i][cols[k]] = vec[k]
     dt = DataFrame.from_dict(dic, orient='index')
@@ -165,10 +164,10 @@ def get_order_vcf (normal_name, infile):
                 return(['t','n'])
             if order.index(normal_name) == 0:
                 return(['n','t'])
-    
+
 def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
                    sample_order=['n','t'],dbsnp_freq=True, dbsnpFreq = None,
-                   dbsnpAllele=None,code=None, vcf=None):
+                   dbsnpAllele=None, code, vcf):
     
     ## defining column names
     cols = []
@@ -181,7 +180,7 @@ def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
                 'alt.base','genotype','annotation','cov.ref','cov.alt']
     if mutect:
         sample_order = get_order_vcf (code, vcf)
-        
+    
     test_size = 0
     for i in [fi_novel, fi_known, fi_mit]:
         test_size += os.path.getsize(i)
