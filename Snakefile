@@ -650,8 +650,10 @@ rule MakeFinalFile:
         vcf = None,  # Not necessary except for muTect  
     benchmark:
         "benchmarks/benchmark_MakeFinalFile_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    script:
-        "{params.scripts}" + "MakeFinalFile.py"
+    shell:
+        "touch {output}"
+    #script:
+     #   "{params.scripts}" + "MakeFinalFile.py"
 
 
 ##############################
@@ -813,8 +815,10 @@ rule MakeFinalFile_mutect:
         vcf = resultdir+"{sick}"+"_mutect.vcf",   
     benchmark:
         "benchmarks/benchmark_MakeFinalFileM_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    script:
-        "{params.scripts}" + "MakeFinalFile.py"
+    shell:
+        "touch {output}"
+    #script:   
+        #"{params.scripts}" + "MakeFinalFile.py"
    
 ###########################
 #        run_lodn         #
@@ -838,8 +842,10 @@ rule lodn_table:
         "envs/config_conda.yaml"   
     benchmark:
         "benchmarks/benchmark_LODntable_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    script:
-        "{params.scripts}" + "LODn_table.py"
+    shell:
+        "touch {output}"
+    #script:
+     #   "{params.scripts}" + "LODn_table.py"
 
 rule lodn_vcf:
     """
@@ -859,8 +865,10 @@ rule lodn_vcf:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_LODnvcf_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    script:
-        "{params.scripts}" + "LODn_vcf.py"
+    shell:
+        "touch {output}"
+    #script:
+     #   "{params.scripts}" + "LODn_vcf.py"
 
 #rule LODn:
 #    """
