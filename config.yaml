@@ -1,9 +1,8 @@
 
-label_params:
-    n_sim: '1' 
-    cpu_type: 'xeond'
-    threads: '1'
-    n_cpu: '1'
+n_sim: '1' 
+cpu_type: 'xeond'
+threads: '1'
+n_cpu: '1'
 
 ref-files:
     hg: '/data_ref/human_g1k_v37.fasta' #Human Genome Reference
