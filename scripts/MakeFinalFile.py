@@ -123,7 +123,7 @@ def parse_mit (fi_known,mutect=False,sample_order=['n','t']):
                 'format','info_%s'%sample_order[0], 
                 'info_%s'%sample_order[1]]
         for i in range(len(data)):
-            vec = data[i].split('\t')
+            vec = data[i].rstrip().split('\t')
             #ixs = [2,3,4,5,6,7,8,10,1,18,19,20]
             ixs = [0,1,2,3,4,5,6,7,8,9,10,11]
             for k in range(len(ixs)):
@@ -134,7 +134,7 @@ def parse_mit (fi_known,mutect=False,sample_order=['n','t']):
                 'pos.end','ref.base','alt.base','database','type',
                 'format','info']
         for i in range(len(data)):
-            vec = data[i].split('\t')
+            vec = data[i].rstrip().split('\t')
             for k in range(len(vec)):
                 dic[i][cols[k]] = vec[k]
     dt = DataFrame.from_dict(dic, orient='index')
@@ -155,16 +155,6 @@ def parse_mit (fi_known,mutect=False,sample_order=['n','t']):
     dt['known.flag'] = 0
     return(dt)
 
-def get_order_vcf (normal_name, infile):
-    
-    for line in open(infile,'r').readlines():
-        if line.startswith('#CHROM'):
-            order = line.rstrip().split('\t')[-2:]
-            if order.index(normal_name) == 1:
-                return(['t','n'])
-            if order.index(normal_name) == 0:
-                return(['n','t'])
-
 def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
                    sample_order=['n','t'],dbsnp_freq=True, dbsnpFreq = None,
                    dbsnpAllele=None, code = None, vcf = None):
@@ -180,7 +170,7 @@ def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
                 'alt.base','genotype','annotation','cov.ref','cov.alt']
     if mutect:
         sample_order = get_order_vcf (code, vcf)
-    
+        
     test_size = 0
     for i in [fi_novel, fi_known, fi_mit]:
         test_size += os.path.getsize(i)
@@ -239,6 +229,8 @@ def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
                         next
         
     final.to_csv(outfile, sep='\t',header=True, index=None)
+
+
 
 MakeFinalFile (snakemake.input['k_f'],snakemake.input['n_f'],snakemake.input['mit_rmdup'],snakemake.output['out'],snakemake.params['mutect'],
                    snakemake.params['sample_order'],snakemake.params['dbsnp_freq'], snakemake.params['dbsnpFreq'],
