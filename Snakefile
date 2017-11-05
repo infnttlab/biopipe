@@ -895,10 +895,10 @@ rule lodn_table:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_LODntable_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    shell:
-        "touch {output}"
-    #script:
-     #   "{params.scripts}" + "LODn_table.py"
+    #shell:
+     #   "touch {output}"
+    script:
+        "{params.scripts}" + "LODn_table.py"
 
 rule lodn_vcf:
     """
@@ -918,10 +918,10 @@ rule lodn_vcf:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_LODnvcf_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    shell:
-        "touch {output}"
-    #script:
-     #   "{params.scripts}" + "LODn_vcf.py"
+    #shell:
+     #   "touch {output}"
+    script:
+        "{params.scripts}" + "LODn_vcf.py"
 
 #rule LODn:
 #    """
