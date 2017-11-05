@@ -4,6 +4,16 @@ import pandas as pd
 from pandas import DataFrame
 from collections import defaultdict
 
+def get_order_vcf (normal_name, infile):
+    
+    for line in open(infile,'r').readlines():
+        if line.startswith('#CHROM'):
+            order = line.rstrip().split('\t')[-2:]
+            if order.index(normal_name) == 1:
+                return(['t','n'])
+            if order.index(normal_name) == 0:
+                return(['n','t'])
+
 def parse_known (fi_known, mutect=False,sample_order=['n','t']):
     genotype = {'0/0':'hom','0/1': 'het', '1/1': 'hom'}
     
