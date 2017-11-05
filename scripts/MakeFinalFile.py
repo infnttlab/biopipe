@@ -37,7 +37,14 @@ def parse_known (fi_known, mutect=False,sample_order=['n','t']):
         rf = {'t':[],'n':[]}
         at = {'t':[],'n':[]}
         gt = [x.split(':')[0] for x in dt['info_t']]
-        dt['genotype'] = [genotype[x] for x in gt]
+        ## ugly solution
+        ## bug: different genotype coding found in vcf. The code was set for
+        ## genotypes coded as in the genotype dictionary
+        try:
+            dt['genotype'] = [genotype[x] for x in gt]
+        except:
+            dt['genotype'] = float('nan')
+
         for i in ['t', 'n']:
             rf[i] = [x.split(':')[1].split(',')[0] for x in dt['info_%s'%i]]
             at[i] = [x.split(':')[1].split(',')[1] for x in dt['info_%s'%i]]
@@ -66,7 +73,7 @@ def parse_novel (infile,mutect=False,sample_order=['n','t']):
                 'pos.end','ref.base','alt.base','genotype','QUAL','database',
                 'name_var', 'format','info_%s'%sample_order[0],
                 'info_%s'%sample_order[1]]
-        for i in range(len(data)-1):
+        for i in range(len(data)):
             vec = data[i].split('\t')
             for k in range(len(vec[:11])):
                 dic[i][cols[k]] = vec[k]
@@ -90,7 +97,13 @@ def parse_novel (infile,mutect=False,sample_order=['n','t']):
         rf = {'t':[],'n':[]}
         at = {'t':[],'n':[]}
         gt = [x.split(':')[0] for x in dt['info_t']]
-        dt['genotype'] = [genotype[x] for x in gt]
+        ## ugly solution
+        ## bug: different genotype coding found in vcf. The code was set for
+        ## genotypes coded as in the genotype dictionary
+        try:
+            dt['genotype'] = [genotype[x] for x in gt]
+        except:
+            dt['genotype'] = float('nan')
         for i in ['t', 'n']:
             rf[i] = [x.split(':')[1].split(',')[0] for x in dt['info_%s'%i]]
             at[i] = [x.split(':')[1].split(',')[1] for x in dt['info_%s'%i]]
@@ -164,10 +177,11 @@ def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
     if mutect:
         cols = ['name_var','type','chr', 'pos.start', 'pos.end','ref.base',
                 'alt.base','genotype','annotation','t_cov.ref','t_cov.alt',
-                'n_cov.ref','n_cov.alt']
+                'n_cov.ref','n_cov.alt','known.flag']
     else:
         cols = ['name_var','type','chr', 'pos.start', 'pos.end','ref.base',
-                'alt.base','genotype','annotation','cov.ref','cov.alt']
+                'alt.base','genotype','annotation','cov.ref','cov.alt',
+                'known.flag']
     if mutect:
         sample_order = get_order_vcf (code, vcf)
         
@@ -181,12 +195,15 @@ def MakeFinalFile (fi_known,fi_novel,fi_mit,outfile='sample.tsv',mutect=False,
         if os.path.getsize(fi_novel) > 0:
             dt['novel'] = parse_novel(fi_novel,mutect=mutect,
                                       sample_order=sample_order)
+            dt['novel']['known.flag'] = 0
         if os.path.getsize(fi_known) > 0:
             dt['known'] = parse_known(fi_known,mutect=mutect,
                                       sample_order=sample_order)
+            dt['known']['known.flag'] = 1
         if os.path.getsize(fi_mit) > 0:
             dt['mit'] = parse_mit(fi_mit,mutect=mutect,
                                   sample_order=sample_order)
+            dt['mit']['known.flag'] = 0
         for i in dt.keys():
             if mutect:
                 dt[i]['genotype'] = 'unknown'
