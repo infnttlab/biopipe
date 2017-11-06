@@ -69,10 +69,10 @@ def lodn_calculator_vcf(tumor_vcf,normal_bam,outfile,min_n_cov = 8,
                                                    variant.ALT[0],
                                                    variant.REF)
             if total_cov > min_n_cov and tumor_cov > min_t_cov:
-                l_m0 = log_l_m_f(bamfile, variant.ALT[0], variant.REF,
-                                 0, variant.POS,variant.CHROM)
-                l_m0 = log_l_m_f(bamfile, variant.ALT[0], variant.REF,
-                                 0.5, variant.POS,variant.CHROM)
+                l_m0 = log_l_m_f(bamfile,variant.POS,variant.CHROM,
+                                 variant.ALT[0],variant.REF,0)
+                l_m = log_l_m_f(bamfile,variant.POS,variant.CHROM,
+                                variant.ALT[0],variant.REF,0.5)
                 try:
                     lod_n = (l_m0)-(l_m)
                 except:
