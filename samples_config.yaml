@@ -1,0 +1,3 @@
+patients: 
+    Patient: ['/home/daniele/Tesi/biopipe/Data/patient_1/Normal/Normal','/home/daniele/Tesi/biopipe/Data/patient_1/Tumour/Tumour']
+    
