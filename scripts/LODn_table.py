@@ -14,16 +14,17 @@ def get_covs(samfile,pos,ch,alt,ref,min_mapq = 20, min_phred = 20):
         if pileupcolumn.pos == pos - 1:      
             total_cov = pileupcolumn.n
             ###each read aligned to a pileup colum
-            for pileupread in pileupcolumn.pileups:    
-                b = pileupread.alignment.seq[pileupread.query_position]
-                qvalue = pileupread.alignment.qual[pileupread.query_position]
-                qvalue = ord(qvalue) - 33
-                if pileupread.alignment.mapq >= min_mapq:
-                    if qvalue >= min_phred:
-                        if b == alt:
-                            alt_cov += 1
-                        elif b == ref:
-                            ref_cov += 1
+            for pileupread in pileupcolumn.pileups:
+                if not pileupread.is_del and not pileupread.is_refskip:    
+                    b = pileupread.alignment.seq[pileupread.query_position]
+                    qvalue = pileupread.alignment.qual[pileupread.query_position]
+                    qvalue = ord(qvalue) - 33
+                    if pileupread.alignment.mapq >= min_mapq:
+                        if qvalue >= min_phred:
+                            if b == alt:
+                                alt_cov += 1
+                            elif b == ref:
+                                ref_cov += 1
     return(alt_cov, ref_cov, total_cov)
 
 
@@ -33,19 +34,20 @@ def log_l_m_f(samfile,pos,ch,alt,ref,f,min_mapq = 20, min_phred = 20):
     for pileupcolumn in samfile.pileup(str(ch),pos - 2,pos):
         if pileupcolumn.pos == pos - 1 :
             for pileupread in pileupcolumn.pileups:
-                b = pileupread.alignment.seq[pileupread.query_position]
-                qvalue = pileupread.alignment.qual[pileupread.query_position]
-                qvalue = ord(qvalue) - 33
-                if pileupread.alignment.mapq >= min_mapq:
-                    if qvalue >= min_phred:
-                        e = 10**(float(-1 * qvalue)/10)
-                        if b == ref:
-                            p = (f*(e/3)) + ((1-f)*(1-e))
-                        elif b == alt:
-                            p = (f*(1-e) )+((1-f)*(e/3))
-                        else:
-                            p = e/3
-                        prob.append(math.log10(p))
+                if not pileupread.is_del and not pileupread.is_refskip:
+                    b = pileupread.alignment.seq[pileupread.query_position]
+                    qvalue = pileupread.alignment.qual[pileupread.query_position]
+                    qvalue = ord(qvalue) - 33
+                    if pileupread.alignment.mapq >= min_mapq:
+                        if qvalue >= min_phred:
+                            e = 10**(float(-1 * qvalue)/10)
+                            if b == ref:
+                                p = (f*(e/3)) + ((1-f)*(1-e))
+                            elif b == alt:
+                                p = (f*(1-e) )+((1-f)*(e/3))
+                            else:
+                                p = e/3
+                            prob.append(math.log10(p))
     if len(prob) == 0:
         return (float('NaN'))
     else:
