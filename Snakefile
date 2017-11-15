@@ -142,8 +142,6 @@ rule Unzip_sample:
     output:
         sample1_unzipped = temp("{path}"+"_1.fastq"),
         sample2_unzipped = temp("{path}"+"_2.fastq"),
-    benchmark:
-        "benchmarks/benchmark_Unzip_ref_"+"{path}".split('/')[-1] + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
         "gunzip -c {input.sample1_zipped} > {output.sample1_unzipped} &&"
         "gunzip -c {input.sample2_zipped} > {output.sample2_unzipped}"
