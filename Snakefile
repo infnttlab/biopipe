@@ -693,7 +693,7 @@ rule lodn_vcf:
 rule download_reference:
     """download the hg19 human reference genome from 1000genome"""
     output:
-        zipped = hg+'.gz',
+        zipped = temp(hg+'.gz'),
     version: 0.1
     benchmark:
         "benchmarks/benchmark_downloadreference_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
@@ -714,7 +714,7 @@ rule gunzip_reference:
 rule download_indels_ref:
     """download the indel reference from 1000genome """
     output:
-        indel_zipped= indels_ref+'.gz'
+        indel_zipped= temp(indels_ref+'.gz'),
     benchmark:
         "benchmarks/benchmark_downloadindels_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
@@ -735,7 +735,7 @@ rule gunzip_indelref:
 rule download_dbsnp:
     """download dbsnp_138.b37 from 1000genome """
     output:
-        dbsnp_zipped= dbsnp+'.gz'
+        dbsnp_zipped= temp(dbsnp+'.gz'),
     benchmark:
         "benchmarks/benchmark_downloaddbsnp_ref_null_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     shell:
@@ -766,7 +766,7 @@ rule download_cosmic:
 rule download_target:
     """download target from illumina"""
     output:
-        target = target + ".bed",
+        target = temp(target + ".bed"),
     shell:
         "wget https://support.illumina.com/content/dam/illumina-support/documents/documentation/chemistry_documentation/samplepreps_nextera/nexterarapidcapture/nexterarapidcapture_expandedexome_targetedregions.bed && "
         "mv nexterarapidcapture_expandedexome_targetedregions.bed {output.target}"
