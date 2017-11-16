@@ -102,6 +102,9 @@ def path_to_sample(wildcards, index = '1'):
 
 def get_bam(wildcards, sample_type='N'):
     return (resultdir+sicks_list[wildcards][sample_type]+"_recal.bam")
+
+def get_bai(wildcards, sample_type='N'):
+    return (resultdir+sicks_list[wildcards][sample_type]+"_recal.bai")
         
 def get_code(wildcards):
     return (sicks_list[wildcards]['N'])
@@ -110,7 +113,7 @@ def get_lodn_infile(wildcards,format):
     if format == 'table':
         return (resultdir+sicks_list[wildcards]['T']+".tsv")
     elif format == 'vcf':
-        return (resultdir+sicks_list[wildcards]['T']+"_filtered_variants.vcf") 
+        return (resultdir+sicks_list[wildcards]['T']+"_filtered_variants.vcf")  
         
 #######################
 # Workflow final rule #
@@ -260,6 +263,7 @@ rule IndelRealigner:
     input:
         target=resultdir+"{sample}"+".intervals",
         bam=resultdir+"{sample}"+"_dedup.bam",
+        idx=resultdir+"{sample}"+"_dedup.bai",
     output:
         r_bam = temp(resultdir+"{sample}"+"_realigned.bam"),
         r_idx = temp(resultdir+"{sample}"+"_realigned.bai"),
@@ -305,6 +309,7 @@ rule BQSR_step_2:
     input:
         outtable1 = resultdir+"{sample}"+"_recal_data.table",
         r_bam=resultdir+"{sample}"+"_realigned.bam",
+        r_idx=resultdir+"{sample}"+"_realigned.bai",
     output:
         outtable2 = temp(resultdir+"{sample}"+"_post_recal_data.table"),
     params:
@@ -345,6 +350,7 @@ rule BQSR_step_4:
     """
     input:
         r_bam = resultdir+"{sample}"+"_realigned.bam",
+        r_idx=resultdir+"{sample}"+"_realigned.bai",
         outtable1 = resultdir+"{sample}"+"_recal_data.table",
         plots = resultdir+"{sample}"+"_recalibrationPlots.pdf",
     output:
@@ -554,6 +560,8 @@ rule muTect:
         fixed_target = target + "_fixed.bed",
         normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
         tumour_bam = lambda wildcards: get_bam(wildcards.sick,'T'),
+        normal_bai = lambda wildcards: get_bai(wildcards.sick,'N'),
+        tumour_bai = lambda wildcards: get_bai(wildcards.sick,'T'),
     output:
         vcf = resultdir+"{sick}"+"_mutect.vcf",
         coverage_out = resultdir+"{sick}"+"_coverage.wig",
@@ -630,6 +638,7 @@ rule lodn_table:
     input:
         infile = lambda wildcards: get_lodn_infile(wildcards.sick,'table'),
         normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
+        normal_bai = lambda wildcards: get_bai(wildcards.sick,'N')
     output:
         outfile = resultdir+"{sick}"+"_lodn_table.tsv",
     params:
@@ -651,6 +660,7 @@ rule lodn_vcf:
     input:
         infile = lambda wildcards: get_lodn_infile(wildcards.sick,'vcf'),
         normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
+        normal_bai = lambda wildcards: get_bai(wildcards.sick,'N')
     output:
         outfile = resultdir+"{sick}"+"_lodn.vcf",
     params:
