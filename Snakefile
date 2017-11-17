@@ -109,11 +109,11 @@ def get_bai(wildcards, sample_type='N'):
 def get_code(wildcards):
     return (sicks_list[wildcards]['N'])
 
-def get_lodn_infile(wildcards,format):
+def get_lodn_infile(wildcards,format,idx=""):
     if format == 'table':
         return (resultdir+sicks_list[wildcards]['T']+".tsv")
     elif format == 'vcf':
-        return (resultdir+sicks_list[wildcards]['T']+"_filtered_variants.vcf")  
+        return (resultdir+sicks_list[wildcards]['T']+"_filtered_variants.vcf"+idx)  
         
 #######################
 # Workflow final rule #
@@ -377,6 +377,7 @@ rule HaplotypeCaller:
         recal_bai = resultdir+"{sample}"+"_recal.bai",
     output:
         vcf_raw = temp(resultdir+"{sample}"+"_raw.vcf"),
+        vcf_idx = temp(resultdir+"{sample}"+"_raw.vcf.idx")
     params:
         gatk = gatk,
         ref=hg,
@@ -398,9 +399,11 @@ rule HardFilter_1SNPs:
     This tool extracts the snps from the call set.
     """
     input:
-        vcf_raw = resultdir+"{sample}"+"_raw.vcf"
+        vcf_raw = resultdir+"{sample}"+"_raw.vcf",
+        vcf_idx = resultdir+"{sample}"+"_raw.vcf.idx"
     output:
         raw_snps = temp(resultdir+"{sample}"+"_snps.vcf"),
+        raw_snps_idx = temp(resultdir+"{sample}"+"_snps.vcf.idx"),
     params:
         gatk = gatk,
         ref=hg,
@@ -418,9 +421,11 @@ rule HardFilter_2SNPs:
     This tool applies the filter to the SNP call set.
     """
     input:
-        raw_snps = resultdir+"{sample}"+"_snps.vcf"
+        raw_snps = resultdir+"{sample}"+"_snps.vcf",
+        raw_snps_idx = temp(resultdir+"{sample}"+"_snps.vcf.idx"),
     output:
-        filt_snps = temp(resultdir+"{sample}"+"_hard_filtered.snps.vcf")
+        filt_snps = temp(resultdir+"{sample}"+"_hard_filtered.snps.vcf"),
+        filt_snps_idx = temp(resultdir+"{sample}"+"_hard_filtered.snps.vcf.idx")
     params:
         gatk = gatk,
         ref=hg,
@@ -439,8 +444,10 @@ rule HardFilter_1Indels:
     """
     input:
         vcf_raw = resultdir+"{sample}"+"_raw.vcf",
+        vcf_idx = resultdir+"{sample}"+"_raw.vcf.idx",
     output:
         raw_indels = temp(resultdir+"{sample}"+"_indels.vcf"),
+        raw_indels_idx = temp(resultdir+"{sample}"+"_indels.vcf.idx"),
     params:
         gatk = gatk,
         ref=hg,
@@ -459,8 +466,10 @@ rule HardFilter_2Indels:
     """
     input:
         raw_indels = resultdir+"{sample}"+"_indels.vcf",
+        raw_indels_idx = temp(resultdir+"{sample}"+"_indels.vcf.idx"),
     output:
         filt_indels = temp(resultdir+"{sample}"+"_hard_filtered.indels.vcf"),
+        filt_indels_idx = temp(resultdir+"{sample}"+"_hard_filtered.indels.vcf.idx"),
     params:
         gatk = gatk,
         ref=hg,
@@ -479,9 +488,12 @@ rule HardFilter_Combine:
     """
     input:
         filt_snps = resultdir+"{sample}"+"_hard_filtered.snps.vcf",
+        filt_snps_idx = temp(resultdir+"{sample}"+"_hard_filtered.snps.vcf.idx"),
         filt_indels = resultdir+"{sample}"+"_hard_filtered.indels.vcf",
+        filt_indels_idx = temp(resultdir+"{sample}"+"_hard_filtered.indels.vcf.idx"),
     output:
-        vcf_filt = resultdir+"{sample}"+"_filtered_variants.vcf"
+        vcf_filt = resultdir+"{sample}"+"_filtered_variants.vcf",
+        vcf_filt_idx = resultdir+"{sample}"+"_filtered_variants.vcf.idx"
     params:
         gatk = gatk,
         ref=hg,
@@ -564,6 +576,7 @@ rule muTect:
         tumour_bai = lambda wildcards: get_bai(wildcards.sick,'T'),
     output:
         vcf = resultdir+"{sick}"+"_mutect.vcf",
+        vcf_idx = resultdir+"{sick}"+"_mutect.vcf.idx",
         coverage_out = resultdir+"{sick}"+"_coverage.wig",
     params:
         dbsnp = dbsnp,
@@ -578,6 +591,7 @@ rule muTect:
 rule Annotation_muTect:
     input:
         vcf = resultdir+"{sick}"+"_mutect.vcf",
+        vcf_idx = resultdir+"{sick}"+"_mutect.vcf.idx",
         annovar_dbs = annovar_dbs,
     output:
         k_f = temp(resultdir+ 'mutect_ann/' + "{sick}"+"_rmdup.known.exonic_variant_function"),
@@ -599,7 +613,7 @@ rule Annotation_muTect:
         maf = 0.05,
         mutect = True,
     benchmark:
-        "benchmarks/benchmark_Annotation_ref_muTect_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
+        "benchmarks/benchmark_AnnotationM_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     script:
         "{params.scripts}"+"Annotation.py"
 
@@ -659,6 +673,7 @@ rule lodn_vcf:
     """
     input:
         infile = lambda wildcards: get_lodn_infile(wildcards.sick,'vcf'),
+        infile_idx = lambda wildcards: get_lodn_infile(wildcards.sick,'vcf','.idx'),
         normal_bam = lambda wildcards: get_bam(wildcards.sick,'N'),
         normal_bai = lambda wildcards: get_bai(wildcards.sick,'N')
     output:
@@ -674,12 +689,6 @@ rule lodn_vcf:
         "benchmarks/benchmark_LODnvcf_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
     script:
         "{params.scripts}" + "LODn_vcf.py"
-
-#########################################
-#          Unzipping samples            #
-#########################################
-
-
 
 
 ###############################################################################
