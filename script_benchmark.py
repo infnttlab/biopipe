@@ -1,14 +1,15 @@
 import pandas as pd  
-import pylab as plt
 import os
 import re
+import sys
 
-#benchmark_{name}_subset_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu{n_cpu}.txt
+#benchmark_{name}_subset_{sample}_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{Rthrs}_ncpu{n_cpu}.txt
 
+tablename = sys.argv[1]
 
 list_of_df = []
 for file in os.listdir():
-    if file=="Tabellone.csv":
+    if file==tablename:
         df = pd.read_csv(file, sep='\t')
         list_of_df.append(df)
     
@@ -19,7 +20,7 @@ for file in os.listdir('./'+'benchmarks'):
         
 for benchmark in list_of_benchmark:
     df = pd.read_csv('./benchmarks/'+benchmark, sep='\t')
-    regex = "benchmark_(\w+)_ref_(\w+)_n_sim_(\w+)_cputype_(\w+)_thrs_(\w+)_ncpu_(\w+).txt"
+    regex = "benchmark_(\w+)_ref_(\w+)_n_sim_(\w+)_cputype_(\w+)_Totthrs_(\w+)_Rulethrs_(\w+)_ncpu_(\w+).txt"
     info = re.findall(regex, benchmark)[0]
     print(info)    
     df['rule'] = info[0]
@@ -27,12 +28,13 @@ for benchmark in list_of_benchmark:
         df['Reference subject'] = info[1]
     df['n_sim'] = info[2]
     df['cpu_type'] = info[3]
-    df['threads'] = info[4]
-    df['#cpu'] = info[5]
+    df['Snakemake_threads'] = info[4]
+    df['Rule_threads'] = info[5]
+    df['#cpu'] = info[6]
     list_of_df.append(df)
 x = pd.concat(list_of_df)
-x.to_csv("Tabellone.csv",sep='\t',index = False)
-y = pd.read_csv("Tabellone.csv",sep='\t')
+x.to_csv(tablename,sep='\t',index = False)
+y = pd.read_csv(tablename,sep='\t')
 y = y.sort_values(['n_sim'],ascending=True)
-y.to_csv("Tabellone.csv",sep='\t',index = False)
+y.to_csv(tablename,sep='\t',index = False)
 # %%
