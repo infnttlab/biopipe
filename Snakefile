@@ -4,11 +4,14 @@
 
 shell.executable("/bin/bash") # The pipeline works only on /bin/bash
 
+# Open and read configuration file for samples informations
 import yaml
 with open("samples_config.yaml", "r") as f:
     samples_cfg = yaml.load(f)
     
-configfile: "config.yaml" # Set configuration file
+# Set configuration file
+
+configfile: "config.yaml" 
 
 # Extract the main directory
 import os
@@ -24,8 +27,8 @@ cpu_type = config['cpu_type']
 thrs = config['threads']
 n_cpu = config['n_cpu']
 
-# Manage rule's threads
-T = 8
+# Max threads per each multithreading rule
+max_thrs = 32
 
 # References
 hg = home + config['ref-files']['hg'] # Human Genome Reference
@@ -41,9 +44,6 @@ mitochondrial_ver = config['ref-files']['mitochondrial_ver'] # Set parameter com
 
 # Folders
 scripts = config['folders']['scripts']
-datadir = config['folders']['datadir']
-normal_dir = config['folders']['datadir_normal']
-tumour_dir = config['folders']['datadir_tumour']
 resultdir = config['folders']['resultdir']
 
 # Softwares
@@ -77,16 +77,19 @@ min_t_cov = config['LODn']['min_t_cov']
 #   Get fastq files   #
 #######################
 
+# Define variables
 patients = [p for p in samples_cfg['patients']]
 PATHS = [ps for p in samples_cfg['patients'] for ps in samples_cfg['patients'][p]]    
 SAMPLES = [name.split('/')[-1] for name in PATHS]
 sicks = [s for s in samples_cfg['patients'] if len(samples_cfg['patients'][s])==2]
 
+# Wildcard costrains necessary for search only certain names
 wildcard_constraints:
     path = "("+"|".join(PATHS)+")",
     sample = "("+"|".join(SAMPLES)+")",
     sick = "("+"|".join(sicks)+")",
 
+# Container to get patient name from sample name
 sample_to_patient = {}
 
 for patient in patients:
@@ -94,24 +97,30 @@ for patient in patients:
         s = s.split('/')[-1]
         sample_to_patient[s] = patient
 
+# Container to get normal/tumour sample from patient's name
 sicks_list = {}
 for sick in sicks:
     sicks_list[sick] = {}
     sicks_list[sick]['N'] = samples_cfg['patients'][sick][0].split('/')[-1]
     sicks_list[sick]['T'] = samples_cfg['patients'][sick][1].split('/')[-1]
 
+# Get sample from path
 def path_to_sample(wildcards, index = '1'):
     return (PATHS[SAMPLES.index(wildcards)] + "_{index}.fastq".format(index=index))
 
+# Get normal/tumour bam file from patient's name
 def get_bam(wildcards, sample_type='N'):
     return (resultdir+sicks_list[wildcards][sample_type]+"_recal.bam")
 
+# Get normal/tumour bai file from patient's name
 def get_bai(wildcards, sample_type='N'):
     return (resultdir+sicks_list[wildcards][sample_type]+"_recal.bai")
-        
+
+# Get normal sample name from patient's name       
 def get_code(wildcards):
     return (sicks_list[wildcards]['N'])
-
+    
+# Get table or vcf tumour sample from patient's name    
 def get_lodn_infile(wildcards,format,idx=""):
     if format == 'table':
         return (resultdir+sicks_list[wildcards]['T']+".tsv")
@@ -123,6 +132,9 @@ def get_lodn_infile(wildcards,format,idx=""):
 #######################
 
 rule all:
+    """
+    THE END.
+    """
     input:
         expand(resultdir+"{sample}"+".tsv", sample=SAMPLES),
         expand(resultdir+ 'mutect_ann/' + "{sick}"+".tsv", sick=sicks),
@@ -142,6 +154,9 @@ rule all:
 #############################
 
 rule Unzip_sample1:
+    """
+    Unzip first sample run file.
+    """
     input:
         sample1_zipped = "{path}"+"_1.fastq.gz",
     output:
@@ -150,6 +165,9 @@ rule Unzip_sample1:
         "gunzip -c {input.sample1_zipped} > {output.sample1_unzipped}"
 
 rule Unzip_sample2:
+    """
+    Unzip second sample run file.
+    """    
     input:
         sample2_zipped = "{path}"+"_2.fastq.gz",
     output:
@@ -177,7 +195,7 @@ rule mapping:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_mapping_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     resources: mem=6
     version: 0.1
     message: "bwa is aligning the sample '{params.name}' with the reference genome"
@@ -259,7 +277,7 @@ rule realigner_target_creator:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_realigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     shell:
         "java -jar {input.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
 
@@ -305,7 +323,7 @@ rule BQSR_step_1:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR1_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     shell:
         "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output.outtable1}"
 
@@ -329,7 +347,7 @@ rule BQSR_step_2:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR2_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     shell:
         "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output.outtable2}"
 
@@ -421,9 +439,9 @@ rule HardFilter_1SNPs:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilter1SNPs_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     shell:
-        "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -nt {threads} -o {output.raw_snps}"
+        "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -o {output.raw_snps}"
 
 rule HardFilter_2SNPs:
     """
@@ -444,9 +462,9 @@ rule HardFilter_2SNPs:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilter2SNPs_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     shell:
-        "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_snps} {params.filter_exp_snps} -nt {threads} -o {output.filt_snps}"
+        "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_snps} {params.filter_exp_snps} -o {output.filt_snps}"
 
 rule HardFilter_1Indels:
     """
@@ -467,9 +485,9 @@ rule HardFilter_1Indels:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilter1Indels_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     shell:
-        "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -nt {threads} -o {output.raw_indels}"
+        "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -o {output.raw_indels}"
 
 rule HardFilter_2Indels:
     """
@@ -490,9 +508,9 @@ rule HardFilter_2Indels:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilter2Indels_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     shell:
-        "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_indels} {params.filter_exp_indels} -nt {threads} -o {output.filt_indels}"
+        "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_indels} {params.filter_exp_indels} -o {output.filt_indels}"
 
 rule HardFilter_Combine:
     """
@@ -514,11 +532,14 @@ rule HardFilter_Combine:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilterCombine_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    threads: T
+    threads: max_thrs
     shell:
-        "java -jar {params.gatk} -T CombineVariants -R {params.ref} --variant:snps {input.filt_snps} --variant:indels {input.filt_indels} -nt {threads} -o {output.vcf_filt} -genotypeMergeOptions PRIORITIZE -priority snps,indels"
+        "java -jar {params.gatk} -T CombineVariants -R {params.ref} --variant:snps {input.filt_snps} --variant:indels {input.filt_indels} -o {output.vcf_filt} -genotypeMergeOptions PRIORITIZE -priority snps,indels"
 
 rule Annotation:
+    """
+    This tool uses annovar to annotate.
+    """
     input:
         vcf = resultdir+"{sample}"+"_filtered_variants.vcf",
         annovar_dbs = annovar_dbs,
@@ -567,19 +588,20 @@ rule MakeFinalFile:
         vcf = None,  # Not necessary except for muTect
     benchmark:
         "benchmarks/benchmark_MakeFinalFile_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_thrs_{thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, n_cpu=n_cpu)
-    #shell:
-    #    "touch {output}"
     script:
         "{params.scripts}" + "MakeFinalFile.py"
+
+
 
 
 ##############################
 #        mutect_pipe         #
 ##############################
 
-
-
 rule muTect:
+    """
+    This step uses muTect 1.1.4 to call variants.
+    """
     input:
         muTect = muTect,
         cosmic = cosmic,
@@ -603,6 +625,9 @@ rule muTect:
         "java -Xmx50g -jar {input.muTect} --analysis_type MuTect --reference_sequence {params.ref} --cosmic {input.cosmic} --intervals {input.fixed_target} --input_file:normal {input.normal_bam} --input_file:tumor {input.tumour_bam} --vcf {output.vcf} --coverage_file {output.coverage_out}"
 
 rule Annotation_muTect:
+    """
+    This tool uses annovar to annotate.
+    """
     input:
         vcf = resultdir+"{sick}"+"_mutect.vcf",
         vcf_idx = resultdir+"{sick}"+"_mutect.vcf.idx",
@@ -875,6 +900,9 @@ rule index_samtools:
 #########################################################
 
 rule check_GATK:
+    """
+        This step check if GATK is present in the directory set in config file.
+    """
     output:
         gatk,
     priority: 4
@@ -883,6 +911,9 @@ rule check_GATK:
         "exit 1"
 
 rule check_muTect:
+    """
+        This step check if muTect is present in the directory set in config file.
+    """
     output:
         muTect,
     priority: 3
@@ -891,6 +922,9 @@ rule check_muTect:
         "exit 1"
 
 rule check_Annovar:
+    """
+        This step check if annovar is present in the directory set in config file.
+    """
     output:
         annovar,
     priority: 2
