@@ -1,6 +1,6 @@
 
 n_sim: '1' 
-cpu_type: 'xeond'
+cpu_type: 'bio8'
 threads: '1'
 n_cpu: '1'
 
@@ -19,9 +19,6 @@ ref-files:
 
 folders:
     scripts: 'scripts/'
-    datadir: 'Data/'
-    datadir_normal : '/Normal/'
-    datadir_tumour : '/Tumour/'
     resultdir: 'results/'
 
 softwares:
