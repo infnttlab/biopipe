@@ -6,10 +6,10 @@ start = sys.argv[1]
 finish = sys.argv[2]
 
 
-origin_1 = os.path.expanduser("~") + "/data_ref/SRR1611178_1.fastq"
-origin_2 = os.path.expanduser("~") + "/data_ref/SRR1611178_2.fastq"
-target_1 = "./data/subset_{start}_{finish}_1.fastq".format(start=start,finish=finish)
-target_2 = "./data/subset_{start}_{finish}_2.fastq".format(start=start,finish=finish)
+origin_1 = os.path.expanduser("~") + "/data_ref/normal_sample/ERR160124_1.fastq"
+origin_2 = os.path.expanduser("~") + "/data_ref/normal_sample/ERR160124_2.fastq"
+target_1 = "./Data/patient_1/Normal/subset_normal_{start}_{finish}_1.fastq".format(start=start,finish=finish)
+target_2 = "./Data/patient_1/Normal/subset_normal_{start}_{finish}_2.fastq".format(start=start,finish=finish)
 
 files = [(origin_1,target_1),(origin_2,target_2)]
 
