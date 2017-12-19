@@ -28,7 +28,7 @@ thrs = config['threads']
 n_cpu = config['n_cpu']
 
 # Max threads per each multithreading rule
-max_thrs = 32
+max_thrs = 8
 map_thrs = max_thrs 
 RT_thrs = max_thrs
 BQSR1_thrs = max_thrs
