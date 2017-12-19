@@ -8,10 +8,10 @@ shell.executable("/bin/bash") # The pipeline works only on /bin/bash
 import yaml
 with open("samples_config.yaml", "r") as f:
     samples_cfg = yaml.load(f)
-    
+
 # Set configuration file
 
-configfile: "config.yaml" 
+configfile: "config.yaml"
 
 # Extract the main directory
 import os
@@ -28,13 +28,12 @@ thrs = config['threads']
 n_cpu = config['n_cpu']
 
 # Max threads per each multithreading rule
-max_thrs = 8
-map_thrs = max_thrs 
-RT_thrs = max_thrs
-BQSR1_thrs = max_thrs
-BQSR2_thrs = max_thrs
-BQSR4_thrs = 4
-HC_thrs = 4
+map_thrs = int(config['map_thrs'])
+RT_thrs = int(config['RT_thrs'])
+BQSR1_thrs = int(config['BQSR1_thrs'])
+BQSR2_thrs = int(config['BQSR2_thrs'])
+BQSR4_thrs = int(config['BQSR4_thrs'])
+HC_thrs = int(config['HC_thrs'])
 HF1_thrs = 1
 HF2_thrs = 1
 HFC_thrs = 1
@@ -91,7 +90,7 @@ min_t_cov = config['LODn']['min_t_cov']
 
 # Define variables
 patients = [p for p in samples_cfg['patients']]
-PATHS = [ps for p in samples_cfg['patients'] for ps in samples_cfg['patients'][p]]    
+PATHS = [ps for p in samples_cfg['patients'] for ps in samples_cfg['patients'][p]]
 SAMPLES = [name.split('/')[-1] for name in PATHS]
 sicks = [s for s in samples_cfg['patients'] if len(samples_cfg['patients'][s])==2]
 
@@ -128,17 +127,17 @@ def get_bam(wildcards, sample_type='N'):
 def get_bai(wildcards, sample_type='N'):
     return (resultdir+sicks_list[wildcards][sample_type]+"_recal.bai")
 
-# Get normal sample name from patient's name       
+# Get normal sample name from patient's name
 def get_code(wildcards):
     return (sicks_list[wildcards]['N'])
-    
-# Get table or vcf tumour sample from patient's name    
+
+# Get table or vcf tumour sample from patient's name
 def get_lodn_infile(wildcards,format,idx=""):
     if format == 'table':
         return (resultdir+sicks_list[wildcards]['T']+".tsv")
     elif format == 'vcf':
-        return (resultdir+sicks_list[wildcards]['T']+"_filtered_variants.vcf"+idx)  
-       
+        return (resultdir+sicks_list[wildcards]['T']+"_filtered_variants.vcf"+idx)
+
 #######################
 # Workflow final rule #
 #######################
@@ -179,7 +178,7 @@ rule Unzip_sample1:
 rule Unzip_sample2:
     """
     Unzip second sample run file.
-    """    
+    """
     input:
         sample2_zipped = "{path}"+"_2.fastq.gz",
     output:
