@@ -1,4 +1,3 @@
-
 wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
 chmod ugo+x Miniconda3-latest-Linux-x86_64.sh 
 bash ./Miniconda3-latest-Linux-x86_64.sh -b
@@ -13,13 +12,16 @@ pip install pandas
 pip pysam
 pip install ipython
 conda config --add channels bioconda
-mkdir ~/data_ref
-scp /mnt/avoton/biofisici/data_snakemake/human_g1k_v37.fasta.gz ~/data_ref/
-scp /mnt/avoton/biofisici/data_snakemake/SRR1611178_1.fastq.gz ~/data_ref/
-scp /mnt/avoton/biofisici/data_snakemake/SRR1611178_2.fastq.gz ~/data_ref/
-gunzip ~/data_ref/*.gz
 rm ~/biopipe/Miniconda3-latest-Linux-x86_64.sh
 chmod ugo+x script.sh
 echo " " >> ~/.bashrc
 echo "PATH=~/miniconda3/bin:$PATH"  >> ~/.bashrc
 
+# for different architectures
+
+#mkdir ~/data_ref
+#mkdir ~/data_ref/normal_sample
+#mkdir ~/data_ref/tumor_sample
+
+#scp bio8:~/data_ref/normal_sample  ~/data_ref/normal_sample
+#scp bio8:~/data_ref/tumor_sample ~/data_ref/tumor_sample

@@ -93,7 +93,7 @@ min_t_cov = config['LODn']['min_t_cov']
 
 # Define variables
 patients = [p for p in samples_cfg['patients']]
-PATHS = [ps for p in samples_cfg['patients'] for ps in samples_cfg['patients'][p]]
+PATHS = [home + ps for p in samples_cfg['patients'] for ps in samples_cfg['patients'][p]]
 SAMPLES = [name.split('/')[-1] for name in PATHS]
 sicks = [s for s in samples_cfg['patients'] if len(samples_cfg['patients'][s])==2]
 

@@ -1,6 +1,6 @@
 patients:
-    #P_1: ['/home/STUDENTI/daniele.dallolio/data_ref/normal_sample/GIST/P_1/ERR160124','/home/STUDENTI/daniele.dallolio/data_ref/tumour_sample/GIST/P_1/ERR166338']
-    #P_2: ['/home/STUDENTI/daniele.dallolio/data_ref/normal_sample/GIST/P_2/ERR160136','/home/STUDENTI/daniele.dallolio/data_ref/tumour_sample/GIST/P_2/ERR166339'] 
-    P_3: ['/home/STUDENTI/daniele.dallolio/data_ref/normal_sample/LA/P_3/SRR1299140','/home/STUDENTI/daniele.dallolio/data_ref/tumour_sample/LA/P_3/SRR1299141']
-    P_4: ['/home/STUDENTI/daniele.dallolio/data_ref/normal_sample/LA/P_4/SRR1299134','/home/STUDENTI/daniele.dallolio/data_ref/tumour_sample/LA/P_4/SRR1299135']
-    #P_5: ['/home/STUDENTI/daniele.dallolio/data_ref/normal_sample/LA/P_5/SRR1299130','/home/STUDENTI/daniele.dallolio/data_ref/tumour_sample/LA/P_5/SRR1299131']
+    P_1: ['/data_ref/normal_sample/GIST/P_1/ERR160124','/data_ref/tumour_sample/GIST/P_1/ERR166338']
+    P_2: ['/data_ref/normal_sample/GIST/P_2/ERR160136','/data_ref/tumour_sample/GIST/P_2/ERR166339']
+    P_3: ['/data_ref/normal_sample/LA/P_3/SRR1299140','/data_ref/tumour_sample/LA/P_3/SRR1299141']
+    P_4: ['/data_ref/normal_sample/LA/P_4/SRR1299134','/data_ref/tumour_sample/LA/P_4/SRR1299135']
+    P_5: ['/data_ref/normal_sample/LA/P_5/SRR1299130','/data_ref/tumour_sample/LA/P_5/SRR1299131']
