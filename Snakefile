@@ -202,16 +202,17 @@ rule mapping:
         library = library,
         platform = platform,
         name = "{sample}",
+        map_thrs = map_thrs,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_mapping_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{map_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, map_thrs=map_thrs, n_cpu=n_cpu)
-    threads: map_thrs
+    #threads: map_thrs
     resources: mem=6
     version: 0.1
     message: "bwa is aligning the sample '{params.name}' with the reference genome"
     shell:
-        "bwa mem -M -t {threads} -R \'@RG\\tID:{params.name}\\tSM:{params.name}\\tPL:{params.platform}\\tLB:{params.library}\\tPU:PE\' {params.reference} {input.sample1} {input.sample2} > {output.outfile}"
+        "bwa mem -M -t {params.map_thrs} -R \'@RG\\tID:{params.name}\\tSM:{params.name}\\tPL:{params.platform}\\tLB:{params.library}\\tPU:PE\' {params.reference} {input.sample1} {input.sample2} > {output.outfile}"
 
 
 rule sort_picard:
@@ -284,13 +285,14 @@ rule realigner_target_creator:
         temp(resultdir+"{sample}"+".intervals"),
     params:
         ref=hg,
+        RT_thrs = RT_thrs,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_realigner_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{RT_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, RT_thrs=RT_thrs, n_cpu=n_cpu)
-    threads: RT_thrs
+    #threads: RT_thrs
     shell:
-        "java -jar {input.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {threads} -o {output}"
+        "java -jar {input.gatk} -T RealignerTargetCreator -R {params.ref} -I {input.seq} -known {input.indels_ref} -nt {params.RT_thrs} -o {output}"
 
 
 rule IndelRealigner:
@@ -329,14 +331,15 @@ rule BQSR_step_1:
     params:
         gatk = gatk,
         ref=hg,
-        indels_ref=indels_ref
+        indels_ref=indels_ref,
+        BQSR1_thrs = BQSR1_thrs,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR1_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{BQSR1_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, BQSR1_thrs=BQSR1_thrs,n_cpu=n_cpu)
-    threads: BQSR1_thrs
+    #threads: BQSR1_thrs
     shell:
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {threads} -o {output.outtable1}"
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {input.dbsnp} -knownSites {params.indels_ref} -nct {params.BQSR1_thrs} -o {output.outtable1}"
 
 rule BQSR_step_2:
     """
@@ -354,13 +357,14 @@ rule BQSR_step_2:
         ref=hg,
         indels_ref=indels_ref,
         dbsnp = dbsnp,
+        BQSR2_thrs = BQSR2_thrs,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR2_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{BQSR2_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, BQSR2_thrs=BQSR2_thrs, n_cpu=n_cpu)
-    threads: BQSR2_thrs
+    #threads: BQSR2_thrs
     shell:
-        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {threads} -o {output.outtable2}"
+        "java -jar {params.gatk} -T BaseRecalibrator -R {params.ref} -I {input.r_bam} -knownSites {params.dbsnp} -knownSites {params.indels_ref} -BQSR {input.outtable1} -nct {params.BQSR2_thrs} -o {output.outtable2}"
 
 rule BQSR_step_3:
     """
@@ -396,13 +400,14 @@ rule BQSR_step_4:
     params:
         gatk = gatk,
         ref=hg,
+        BQSR4_thrs = BQSR4_thrs,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_BQSR4_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{BQSR4_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, BQSR4_thrs=BQSR4_thrs, n_cpu=n_cpu)
-    threads: BQSR4_thrs
+    #threads: BQSR4_thrs
     shell:
-        "java -jar {params.gatk} -T PrintReads -R {params.ref} -I {input.r_bam} -BQSR {input.outtable1} -nct {threads} -o {output.recal_bam}"
+        "java -jar {params.gatk} -T PrintReads -R {params.ref} -I {input.r_bam} -BQSR {input.outtable1} -nct {params.BQSR4_thrs} -o {output.recal_bam}"
 
 rule HaplotypeCaller:
     """
@@ -421,13 +426,14 @@ rule HaplotypeCaller:
         genotyping_mode = genotyping_mode,
         stand_emit_conf = stand_emit_conf,
         stand_call_conf = stand_call_conf,
+        HC_thrs = HC_thrs,
     conda:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HaplotypeCaller_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{HC_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, HC_thrs=HC_thrs, n_cpu=n_cpu)
-    threads: HC_thrs
+    #threads: HC_thrs
     shell:
-        "java -jar {params.gatk} -T HaplotypeCaller -R {params.ref} -I {input.recal_bam} --genotyping_mode {params.genotyping_mode} -stand_emit_conf {params.stand_emit_conf} -stand_call_conf {params.stand_call_conf} -nct {threads} -o {output.vcf_raw}"
+        "java -jar {params.gatk} -T HaplotypeCaller -R {params.ref} -I {input.recal_bam} --genotyping_mode {params.genotyping_mode} -stand_emit_conf {params.stand_emit_conf} -stand_call_conf {params.stand_call_conf} -nct {params.HC_thrs} -o {output.vcf_raw}"
 
 # Since GATK 3.7 -stand_emit_conf {params.stand_emit_conf} has been deprecated
 
@@ -450,7 +456,7 @@ rule HardFilter_1SNPs:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilter1SNPs_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{HF1_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, HF1_thrs=HF1_thrs, n_cpu=n_cpu)
-    threads: HF1_thrs
+    #threads: HF1_thrs
     shell:
         "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -o {output.raw_snps}"
 
@@ -473,7 +479,7 @@ rule HardFilter_2SNPs:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilter2SNPs_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{HF2_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, HF2_thrs=HF2_thrs, n_cpu=n_cpu)
-    threads: HF2_thrs
+    #threads: HF2_thrs
     shell:
         "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_snps} {params.filter_exp_snps} -o {output.filt_snps}"
 
@@ -496,7 +502,7 @@ rule HardFilter_1Indels:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilter1Indels_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{HF1_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, HF1_thrs=HF1_thrs, n_cpu=n_cpu)
-    threads: HF1_thrs
+    #threads: HF1_thrs
     shell:
         "java -jar {params.gatk} -T SelectVariants -R {params.ref} -V {input.vcf_raw} {params.selectType} -o {output.raw_indels}"
 
@@ -519,7 +525,7 @@ rule HardFilter_2Indels:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilter2Indels_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{HF2_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, HF2_thrs=HF2_thrs, n_cpu=n_cpu)
-    threads: HF2_thrs
+    #threads: HF2_thrs
     shell:
         "java -jar {params.gatk} -T VariantFiltration -R {params.ref} -V {input.raw_indels} {params.filter_exp_indels} -o {output.filt_indels}"
 
@@ -543,7 +549,7 @@ rule HardFilter_Combine:
         "envs/config_conda.yaml"
     benchmark:
         "benchmarks/benchmark_HardFilterCombine_ref_{sample}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{HFC_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, HFC_thrs=HFC_thrs, n_cpu=n_cpu)
-    threads: HFC_thrs
+    #threads: HFC_thrs
     shell:
         "java -jar {params.gatk} -T CombineVariants -R {params.ref} --variant:snps {input.filt_snps} --variant:indels {input.filt_indels} -o {output.vcf_filt} -genotypeMergeOptions PRIORITIZE -priority snps,indels"
 
@@ -713,7 +719,7 @@ rule lodn_table:
         min_t_cov = min_t_cov,
     conda:
         "envs/config_conda.yaml"
-    threads: LodnT_thrs
+    #threads: LodnT_thrs
     benchmark:
         "benchmarks/benchmark_LODntable_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{LodnT_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, LodnT_thrs=LodnT_thrs, n_cpu=n_cpu)
     script:
@@ -737,7 +743,7 @@ rule lodn_vcf:
         min_t_cov = min_t_cov,
     conda:
         "envs/config_conda.yaml"
-    threads: Lodnv_thrs
+    #threads: Lodnv_thrs
     benchmark:
         "benchmarks/benchmark_LODnvcf_ref_{sick}" + "_n_sim_{n_sim}_cputype_{cpu_type}_Totthrs_{thrs}_Rulethrs_{Lodnv_thrs}_ncpu_{n_cpu}.txt".format(n_sim=n_sim, cpu_type=cpu_type, thrs=thrs, Lodnv_thrs=Lodnv_thrs, n_cpu=n_cpu)
     script:
