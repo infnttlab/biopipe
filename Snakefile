@@ -5,13 +5,16 @@
 shell.executable("/bin/bash") # The pipeline works only on /bin/bash
 
 # Open and read configuration file for samples informations
+
+configfile: "config.yaml"
 import yaml
-with open("samples_config.yaml", "r") as f:
+sample_file = config['sample_file']
+with open(sample_file, "r") as f:
     samples_cfg = yaml.load(f)
 
 # Set configuration file
 
-configfile: "config.yaml"
+
 
 # Extract the main directory
 import os

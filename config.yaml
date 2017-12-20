@@ -3,6 +3,7 @@ n_sim: '1'
 cpu_type: 'bio8'
 threads: '1'
 n_cpu: '1'
+sample_file: 'samples_config.yaml'
 
 map_thrs: 1
 RT_thrs: 1
