@@ -120,7 +120,7 @@ for sick in sicks:
 
 # Get sample from path
 def path_to_sample(wildcards, index = '1'):
-    return (PATHS[SAMPLES.index(wildcards)] + "_{index}.fastq".format(index=index))
+    return (PATHS[SAMPLES.index(wildcards)] + "_R{index}.fastq".format(index=index))
 
 # Get normal/tumour bam file from patient's name
 def get_bam(wildcards, sample_type='N'):
@@ -172,9 +172,9 @@ rule Unzip_sample1:
     Unzip first sample run file.
     """
     input:
-        sample1_zipped = "{path}"+"_1.fastq.gz",
+        sample1_zipped = "{path}"+"_R1.fastq.gz",
     output:
-        sample1_unzipped = temp("{path}"+"_1.fastq"),
+        sample1_unzipped = temp("{path}"+"_R1.fastq"),
     shell:
         "gunzip -c {input.sample1_zipped} > {output.sample1_unzipped}"
 
@@ -183,9 +183,9 @@ rule Unzip_sample2:
     Unzip second sample run file.
     """
     input:
-        sample2_zipped = "{path}"+"_2.fastq.gz",
+        sample2_zipped = "{path}"+"_R2.fastq.gz",
     output:
-        sample2_unzipped = temp("{path}"+"_2.fastq"),
+        sample2_unzipped = temp("{path}"+"_R2.fastq"),
     shell:
         "gunzip -c {input.sample2_zipped} > {output.sample2_unzipped}"
 
