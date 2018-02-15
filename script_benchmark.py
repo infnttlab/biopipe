@@ -21,7 +21,8 @@ for file in os.listdir('./'+'benchmarks'):
 for benchmark in list_of_benchmark:
     df = pd.read_csv('./benchmarks/'+benchmark, sep='\t')
     regex = "benchmark_(\w+)_ref_(\w+)_n_sim_(\w+)_cputype_(\w+)_Totthrs_(\w+)_Rulethrs_(\w+)_ncpu_(\w+).txt"
-    info = re.findall(regex, benchmark)[0]
+    benchmark_fixed = benchmark.replace("-","_")
+    info = re.findall(regex, benchmark_fixed)[0]
     print(info)    
     df['rule'] = info[0]
     if info[1]!="null":
